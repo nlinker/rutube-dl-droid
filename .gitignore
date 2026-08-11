@@ -1,0 +1,11 @@
+# Reference material, the project that implement rutube or android/rust
+/3rdparty/
+
+# Scratch space
+/tmp/
+
+# Rust
+/rust/target/
+
+# IDE
+.idea/
