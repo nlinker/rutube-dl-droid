@@ -12,11 +12,10 @@ rutube-dl-droid/
 │   ├── Cargo.toml            # workspace root
 │   ├── rutube-core/          # all the logic. no FFI, no Android
 │   ├── rutube-cli/           # thin binary, phase test harness
-│   └── rutube-ffi/           # UniFFI wrapper, cdylib. phase 1
-├── android/                  # phase 2
+│   └── rutube-ffi/           # UniFFI wrapper, cdylib
+├── android/
 │   ├── settings.gradle.kts
 │   └── app/
-├── 3rdparty/
 └── docs/
 ```
 
