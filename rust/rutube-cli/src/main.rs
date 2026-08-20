@@ -19,7 +19,7 @@ enum Command {
     Dl {
         /// Rutube video URL.
         url: String,
-    }
+    },
 }
 
 #[tokio::main]

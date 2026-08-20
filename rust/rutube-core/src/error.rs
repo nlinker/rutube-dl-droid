@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -19,4 +21,10 @@ pub enum Error {
 
     #[error("cookie store: {0}")]
     Cookies(String),
+}
+
+impl Error {
+    pub(crate) fn parse(what: &'static str, detail: impl Display) -> Self {
+        Self::Parse { what, detail: detail.to_string() }
+    }
 }

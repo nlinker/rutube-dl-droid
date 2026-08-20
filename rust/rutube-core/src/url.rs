@@ -67,11 +67,7 @@ pub fn parse(input: &str) -> Result<VideoRef> {
         .find(|(key, _)| key == "p")
         .map(|(_, value)| value.into_owned());
 
-    Ok(VideoRef {
-        kind,
-        id: id.to_string(),
-        token,
-    })
+    Ok(VideoRef { kind, id: id.to_string(), token })
 }
 
 #[cfg(test)]
@@ -93,10 +89,7 @@ mod tests {
             (format!("https://www.rutube.ru/video/{ID}/"), VideoKind::Video), // subdomain
             (format!("https://rutube.ru/shorts/{ID}/"), VideoKind::Shorts),
             (format!("https://rutube.ru/yappy/{ID}/"), VideoKind::Yappy),
-            (
-                format!("https://rutube.ru/video/private/{ID}/"),
-                VideoKind::Private,
-            ),
+            (format!("https://rutube.ru/video/private/{ID}/"), VideoKind::Private),
         ];
         for (url, kind) in cases {
             let v = do_parse(&url);
@@ -108,9 +101,8 @@ mod tests {
 
     #[test]
     fn parse_private_url() {
-        let v = do_parse(
-            "https://rutube.ru/video/private/56058c9669a49d153cd382e00c1d558e/?r=a&p=Kv8E1wKob-5-JCPpTQ1BGg",
-        );
+        let v =
+            do_parse("https://rutube.ru/video/private/56058c9669a49d153cd382e00c1d558e/?r=a&p=Kv8E1wKob-5-JCPpTQ1BGg");
         assert_eq!(v.kind, VideoKind::Private);
         assert_eq!(v.id, "56058c9669a49d153cd382e00c1d558e");
         assert_eq!(v.token.as_deref(), Some("Kv8E1wKob-5-JCPpTQ1BGg"));
