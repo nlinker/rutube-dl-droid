@@ -23,8 +23,13 @@ pub enum Error {
     Cookies(String),
 }
 
+/// Here are some Error constructors for the convenience.
 impl Error {
     pub(crate) fn parse(what: &'static str, detail: impl Display) -> Self {
         Self::Parse { what, detail: detail.to_string() }
+    }
+
+    pub(crate) fn cookies(detail: impl Display) -> Self {
+        Self::Cookies(detail.to_string())
     }
 }
