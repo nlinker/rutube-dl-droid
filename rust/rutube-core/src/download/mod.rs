@@ -37,76 +37,77 @@ impl Default for DownloadOptions {
     }
 }
 
-/// Everything needed to write the file, resolved before a byte is fetched.
+/// A download resolved down to its segment list, ready to run.
 ///
-/// Separate from [`fetch`] so a caller can name the output from `title` and the
-/// resolution before opening the sink.
-pub struct Plan {
+/// Built in two phases on purpose: [`Download::probe`] settles everything without
+/// writing a byte, so a caller can name the output from `title` and the resolution
+/// before it opens the sink. [`Download::fetch`] then does the transfer.
+pub struct Download<'a> {
+    session: &'a Session,
+    workers: usize,
     pub title: String,
     pub width: u32,
     pub height: u32,
     pub segments: Vec<Segment>,
 }
 
-/// Resolve metadata, pick a variant, and collect the segment list.
-///
-/// Refuses live streams and encrypted segments rather than producing a truncated
-/// or corrupt file.
-pub async fn probe(session: &Session, video: &VideoRef, options: &DownloadOptions) -> Result<Plan> {
-    let meta = api::play_options(session, video).await?;
-    let master = get_text(session, &meta.video_balancer.m3u8).await?;
-    let variants = parse_master(&master)?;
-    let variant = select(&variants, options.quality)?;
+impl<'a> Download<'a> {
+    /// Resolve metadata, pick a variant, and collect the segment list.
+    ///
+    /// Refuses live streams and encrypted segments rather than producing a
+    /// truncated or corrupt file.
+    pub async fn probe(session: &'a Session, video: &VideoRef, options: &DownloadOptions) -> Result<Self> {
+        let meta = api::play_options(session, video).await?;
+        let master = get_text(session, &meta.video_balancer.m3u8).await?;
+        let variants = parse_master(&master)?;
+        let variant = select(&variants, options.quality)?;
 
-    // The playlist URL is also the base its segment URIs resolve against, so both
-    // travel together. `reserve_uri` is the same quality on a second CDN.
-    let (base, media) = match fetch_playlist(session, &variant.uri).await {
-        Ok(found) => found,
-        Err(primary) => match &variant.reserve_uri {
-            Some(reserve) => fetch_playlist(session, reserve).await.map_err(|_| primary)?,
-            None => return Err(primary),
-        },
-    };
+        // The playlist URL is also the base its segment URIs resolve against, so
+        // both travel together. `reserve_uri` is the same quality on a second CDN.
+        let (base, media) = match fetch_playlist(session, &variant.uri).await {
+            Ok(found) => found,
+            Err(primary) => match &variant.reserve_uri {
+                Some(reserve) => fetch_playlist(session, reserve).await.map_err(|_| primary)?,
+                None => return Err(primary),
+            },
+        };
 
-    // Segments get a fallback address on whichever CDN we did not read the
-    // playlist from.
-    let reserve_base = variant
-        .reserve_uri
-        .as_deref()
-        .and_then(|uri| Url::parse(uri).ok())
-        .filter(|reserve| *reserve != base);
+        // Segments get a fallback address on whichever CDN we did not read the
+        // playlist from.
+        let reserve_base = variant
+            .reserve_uri
+            .as_deref()
+            .and_then(|uri| Url::parse(uri).ok())
+            .filter(|reserve| *reserve != base);
 
-    let playlist = parse_media(&media, &base, reserve_base.as_ref())?;
+        let playlist = parse_media(&media, &base, reserve_base.as_ref())?;
 
-    if playlist.kind != PlaylistKind::Vod {
-        return Err(Error::LiveStream);
+        if playlist.kind != PlaylistKind::Vod {
+            return Err(Error::LiveStream);
+        }
+        if let Some(encryption) = playlist.encryption {
+            return Err(Error::Encrypted { method: encryption.method });
+        }
+
+        Ok(Self {
+            session,
+            workers: options.workers,
+            title: meta.title.unwrap_or_else(|| video.id.clone()),
+            width: variant.width,
+            height: variant.height,
+            segments: playlist.segments,
+        })
     }
-    if let Some(encryption) = playlist.encryption {
-        return Err(Error::Encrypted { method: encryption.method });
+
+    /// Download every segment and write them to `sink` in order.
+    pub async fn fetch(&self, sink: &mut dyn Sink, progress: &dyn ProgressListener) -> Result<()> {
+        let fetch_one = |index: usize| {
+            let segment = self.segments[index].clone();
+            async move { get_bytes(self.session, &segment).await }
+        };
+
+        run(self.segments.len(), self.workers, fetch_one, sink, progress).await
     }
-
-    Ok(Plan {
-        title: meta.title.unwrap_or_else(|| video.id.clone()),
-        width: variant.width,
-        height: variant.height,
-        segments: playlist.segments,
-    })
-}
-
-/// Download every segment and write them to `sink` in order.
-pub async fn fetch(
-    session: &Session,
-    plan: &Plan,
-    workers: usize,
-    sink: &mut dyn Sink,
-    progress: &dyn ProgressListener,
-) -> Result<()> {
-    let fetch_one = |index: usize| {
-        let segment = plan.segments[index].clone();
-        async move { get_bytes(session, &segment).await }
-    };
-
-    run(plan.segments.len(), workers, fetch_one, sink, progress).await
 }
 
 /// Variants arrive sorted worst to best, so the ends of the slice are the extremes.
