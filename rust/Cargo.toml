@@ -9,4 +9,4 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 rutube-core = { path = "rutube-core" }
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time"] }

@@ -6,6 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 cookie_store = "0.22.1"
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 itertools = "0.15.0"
 m3u8-rs = "6.0.1"
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "cookies", "gzip", "json", "http2", "charset"] }

@@ -1272,6 +1272,7 @@ name = "rutube-core"
 version = "0.1.0"
 dependencies = [
  "cookie_store",
+ "futures-util",
  "itertools",
  "m3u8-rs",
  "reqwest",
