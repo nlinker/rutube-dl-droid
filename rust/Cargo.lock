@@ -1263,6 +1263,7 @@ name = "rutube-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "itertools",
  "rutube-core",
  "tokio",
 ]

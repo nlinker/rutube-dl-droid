@@ -8,5 +8,6 @@ edition = "2024"
 rust-version = "1.95"
 
 [workspace.dependencies]
+itertools = "0.15.0"
 rutube-core = { path = "rutube-core" }
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time"] }

@@ -26,6 +26,31 @@ pub enum Quality {
     Height(u32),
 }
 
+impl std::fmt::Display for Quality {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Best => f.write_str("best"),
+            Self::Worst => f.write_str("worst"),
+            Self::Height(height) => write!(f, "{height}"),
+        }
+    }
+}
+
+impl std::str::FromStr for Quality {
+    type Err = String;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "best" => Ok(Self::Best),
+            "worst" => Ok(Self::Worst),
+            height => height
+                .parse()
+                .map(Self::Height)
+                .map_err(|_| format!("expected a height, \"best\" or \"worst\", got {height:?}")),
+        }
+    }
+}
+
 pub struct DownloadOptions {
     pub quality: Quality,
     pub workers: usize,
