@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("cookie store: {0}")]
     Cookies(String),
+
+    #[error("io: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 /// Here are some Error constructors for the convenience.
