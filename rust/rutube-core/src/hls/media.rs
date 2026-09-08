@@ -29,6 +29,8 @@ pub struct Encryption {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Segment {
     pub uri: Url,
+    /// Same segment on the second CDN, when the variant offers one.
+    pub reserve_uri: Option<Url>,
     pub duration: f32,
 }
 
@@ -41,16 +43,21 @@ pub struct MediaPlaylist {
 
 /// Parse a media playlist, resolving relative segment URIs against `base` — the URL
 /// the playlist itself came from. `Url::join` drops the variant's `?i=` query.
-pub fn parse_media(text: &str, base: &Url) -> Result<MediaPlaylist> {
-    let playlist = m3u8_rs::parse_media_playlist_res(text.as_bytes())
-        .map_err(|e| Error::parse("media playlist", e))?;
+///
+/// `reserve` is the same variant on the second CDN; each segment gets a fallback
+/// address resolved against it.
+pub fn parse_media(text: &str, base: &Url, reserve: Option<&Url>) -> Result<MediaPlaylist> {
+    let playlist = m3u8_rs::parse_media_playlist_res(text.as_bytes()).map_err(|e| Error::parse("media playlist", e))?;
+
+    let join = |against: &Url, uri: &str| against.join(uri).map_err(|e| Error::parse("segment uri", e));
 
     let segments: Vec<Segment> = playlist
         .segments
         .iter()
         .map(|segment| {
             Result::Ok(Segment {
-                uri: base.join(&segment.uri).map_err(|e| Error::parse("segment uri", e))?,
+                uri: join(base, &segment.uri)?,
+                reserve_uri: reserve.map(|r| join(r, &segment.uri)).transpose()?,
                 duration: segment.duration,
             })
         })
@@ -62,11 +69,7 @@ pub fn parse_media(text: &str, base: &Url) -> Result<MediaPlaylist> {
         .iter()
         .filter_map(|segment| segment.key.as_ref())
         .find(|key| !matches!(key.method, KeyMethod::None))
-        .map(|key| Encryption {
-            method: method_name(&key.method),
-            uri: key.uri.clone(),
-            iv: key.iv.clone(),
-        });
+        .map(|key| Encryption { method: method_name(&key.method), uri: key.uri.clone(), iv: key.iv.clone() });
 
     Ok(MediaPlaylist { kind: kind_of(&playlist), segments, encryption })
 }
@@ -97,6 +100,7 @@ mod tests {
 
     /// Real variant URL shape: a stem the segment URIs repeat, plus the `?i=` query.
     const BASE: &str = "https://cdn.example/hls-vod/tok/42fcc.mp4.m3u8?i=136x240_612";
+    const OTHER: &str = "https://other-cdn.example/hls-vod/tok/42fcc.mp4.m3u8?i=136x240_9";
 
     const TWO_SEGMENTS: &str = "\
 #EXTINF:6.0,
@@ -115,7 +119,8 @@ mod tests {
 
     #[test]
     fn resolve_segment_uris() {
-        let playlist = parse_media(&vod(TWO_SEGMENTS), &base()).expect("parse");
+        let reserve = Url::parse(OTHER).unwrap();
+        let playlist = parse_media(&vod(TWO_SEGMENTS), &base(), Some(&reserve)).expect("parse");
 
         assert_eq!(playlist.kind, PlaylistKind::Vod);
         assert_eq!(playlist.encryption, None);
@@ -127,7 +132,18 @@ mod tests {
                 "https://cdn.example/hls-vod/tok/42fcc.mp4/segment-1-v1-a1.ts",
                 "https://cdn.example/hls-vod/tok/42fcc.mp4/segment-2-v1-a1.ts",
             ],
-            "the variant's ?i= query must not leak into segment urls"
+        );
+        let reserve_uris = playlist
+            .segments
+            .iter()
+            .map(|s| s.reserve_uri.as_ref().map(Url::as_str))
+            .collect_vec();
+        assert_eq!(
+            reserve_uris,
+            [
+                Some("https://other-cdn.example/hls-vod/tok/42fcc.mp4/segment-1-v1-a1.ts"),
+                Some("https://other-cdn.example/hls-vod/tok/42fcc.mp4/segment-2-v1-a1.ts"),
+            ]
         );
         assert_eq!(playlist.segments[1].duration, 4.5);
     }
@@ -138,13 +154,20 @@ mod tests {
         let cases = [
             (vod(TWO_SEGMENTS), PlaylistKind::Vod),
             (event.clone(), PlaylistKind::Event),
-            (format!("#EXTM3U\n#EXT-X-TARGETDURATION:6\n{TWO_SEGMENTS}"), PlaylistKind::Live),
+            (
+                format!("#EXTM3U\n#EXT-X-TARGETDURATION:6\n{TWO_SEGMENTS}"),
+                PlaylistKind::Live,
+            ),
             // A finished EVENT is just a recording.
             (format!("{event}#EXT-X-ENDLIST\n"), PlaylistKind::Vod),
         ];
 
         for (text, expected) in cases {
-            assert_eq!(parse_media(&text, &base()).expect("parse").kind, expected, "{text}");
+            assert_eq!(
+                parse_media(&text, &base(), None).expect("parse").kind,
+                expected,
+                "{text}"
+            );
         }
     }
 
@@ -155,7 +178,7 @@ mod tests {
              #EXTINF:6.0,\n\
              42fcc.mp4/segment-1-v1-a1.ts\n",
         );
-        let encryption = parse_media(&encrypted, &base())
+        let encryption = parse_media(&encrypted, &base(), None)
             .expect("parse")
             .encryption
             .expect("key should be reported");
@@ -166,6 +189,6 @@ mod tests {
 
         // METHOD=NONE is an explicit "not encrypted", not a key.
         let plain = vod("#EXT-X-KEY:METHOD=NONE\n#EXTINF:6.0,\n42fcc.mp4/segment-1-v1-a1.ts\n");
-        assert_eq!(parse_media(&plain, &base()).expect("parse").encryption, None);
+        assert_eq!(parse_media(&plain, &base(), None).expect("parse").encryption, None);
     }
 }

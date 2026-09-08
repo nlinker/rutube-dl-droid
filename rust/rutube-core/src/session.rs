@@ -20,8 +20,7 @@ impl Session {
 
     /// Rebuild a session from the JSON produced by [`Session::export_cookies`].
     pub fn restore(cookies_json: &str) -> Result<Self> {
-        let store =
-            cookie_store::serde::json::load(cookies_json.as_bytes()).map_err(Error::cookies)?;
+        let store = cookie_store::serde::json::load(cookies_json.as_bytes()).map_err(Error::cookies)?;
         Self::build(store)
     }
 

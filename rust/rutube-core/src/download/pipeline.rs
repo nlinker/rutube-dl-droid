@@ -2,9 +2,7 @@ use std::future::Future;
 
 use futures_util::{StreamExt, stream};
 
-use crate::download::Sink;
-use crate::progress::ProgressListener;
-use crate::{Error, Result};
+use crate::{Error, Result, download::Sink, progress::ProgressListener};
 
 /// Fetch `total` items concurrently, write them to `sink` strictly in index order.
 ///
@@ -37,8 +35,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
-    use std::time::Duration;
+    use std::{sync::Mutex, time::Duration};
 
     use super::*;
     use crate::progress::NoProgress;

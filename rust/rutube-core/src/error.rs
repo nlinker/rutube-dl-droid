@@ -24,6 +24,18 @@ pub enum Error {
 
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("master playlist has no usable variants")]
+    NoVariants,
+
+    #[error("no {wanted}p variant; available: {available}")]
+    NoSuchResolution { wanted: u32, available: String },
+
+    #[error("stream is still live; try again once it has ended")]
+    LiveStream,
+
+    #[error("segments are {method} encrypted, which is not supported yet")]
+    Encrypted { method: String },
 }
 
 /// Here are some Error constructors for the convenience.

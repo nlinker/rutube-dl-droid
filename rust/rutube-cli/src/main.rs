@@ -1,7 +1,7 @@
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use rutube_core::{session::Session, api, hls, url};
+use rutube_core::{api, hls, session::Session, url};
 
 #[derive(Parser)]
 #[command(name = "rutube-cli", about = "Download videos from Rutube")]
@@ -61,15 +61,8 @@ async fn info(input: &str) -> rutube_core::Result<()> {
     println!();
 
     for variant in &variants {
-        let reserve = if variant.reserve_uri.is_some() {
-            "yes"
-        } else {
-            "no"
-        };
-        println!(
-            "{:>4}x{:<4}  (reserve: {reserve})",
-            variant.width, variant.height
-        );
+        let reserve = if variant.reserve_uri.is_some() { "yes" } else { "no" };
+        println!("{:>4}x{:<4}  (reserve: {reserve})", variant.width, variant.height);
     }
     Ok(())
 }
