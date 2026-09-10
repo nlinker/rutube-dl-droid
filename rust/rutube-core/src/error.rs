@@ -36,6 +36,9 @@ pub enum Error {
 
     #[error("segments are {method} encrypted, which is not supported yet")]
     Encrypted { method: String },
+
+    #[error("remux: {0}")]
+    Remux(String),
 }
 
 /// Here are some Error constructors for the convenience.
