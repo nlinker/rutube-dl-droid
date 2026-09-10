@@ -14,6 +14,11 @@ crate is young (19 commits, one author) and its 2174 lines live in a single
   one version of it instead of two. Needed no code changes.
 - `crate-type` narrowed from `["cdylib", "rlib"]` to `["rlib"]`. The `cdylib`
   output existed for the author's WebAssembly build, which we do not use.
+- Test fixtures renamed from `.ts` to `.m2t`, and the two `include_bytes!` paths
+  in `tests/integration_tests.rs` updated to match. `.ts` is the TypeScript
+  extension as far as every JetBrains IDE is concerned, so a 1.6 MB transport
+  stream was being parsed as source and reported hundreds of thousands of
+  errors. `.m2t` is a conventional extension for MPEG-2 transport streams.
 
 ## Removed from the copy
 

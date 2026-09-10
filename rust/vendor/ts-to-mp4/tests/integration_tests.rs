@@ -6,12 +6,12 @@ use std::io::Cursor;
 
 /// Load the 738x720 test fixture (video with frame cropping)
 fn load_738x720_fixture() -> Vec<u8> {
-    include_bytes!("fixtures/test_738x720.ts").to_vec()
+    include_bytes!("fixtures/test_738x720.m2t").to_vec()
 }
 
 /// Load the test fixture with audio (video + audio streams)
 fn load_with_audio_fixture() -> Vec<u8> {
-    include_bytes!("fixtures/test_with_audio.ts").to_vec()
+    include_bytes!("fixtures/test_with_audio.m2t").to_vec()
 }
 
 /// NAL unit type constants
