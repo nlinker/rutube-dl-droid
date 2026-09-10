@@ -4,10 +4,6 @@ Source: https://github.com/rajbot/ts-to-mp4 at commit `6035fd7` (2026-01-13),
 published to crates.io as `ts-to-mp4` 0.1.0. Licence AGPL-3.0, unchanged — it is
 why this project is AGPL-3.0 too.
 
-Vendored rather than taken from crates.io so the dependency can be patched: the
-crate is young (19 commits, one author) and its 2174 lines live in a single
-`src/lib.rs`, which makes local fixes feasible if upstream stalls.
-
 ## Local changes
 
 - `thiserror` moved from `"1"` to the workspace version, 2.x, so the project has
@@ -16,8 +12,8 @@ crate is young (19 commits, one author) and its 2174 lines live in a single
   output existed for the author's WebAssembly build, which we do not use.
 - Test fixtures renamed from `.ts` to `.m2t`, and the two `include_bytes!` paths
   in `tests/integration_tests.rs` updated to match. `.ts` is the TypeScript
-  extension as far as every JetBrains IDE is concerned, so a 1.6 MB transport
-  stream was being parsed as source and reported hundreds of thousands of
+  extension for every JetBrains IDE, so a 1.6 MB transport
+  stream was being parsed as TypeScript source and reported hundreds of thousands of
   errors. `.m2t` is a conventional extension for MPEG-2 transport streams.
 
 ## Removed from the copy
