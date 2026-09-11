@@ -5,6 +5,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
     str::FromStr,
+    sync::Arc,
 };
 
 use clap::{Parser, Subcommand};
@@ -149,10 +150,10 @@ async fn download(
     format: Format,
 ) -> rutube_core::Result<()> {
     let video = url::parse(input)?;
-    let session = Session::new()?;
+    let session = Arc::new(Session::new()?);
     let options = DownloadOptions { quality, workers };
 
-    let download = Download::probe(&session, &video, &options).await?;
+    let download = Download::probe(session, &video, &options).await?;
     let path = output.unwrap_or_else(|| PathBuf::from(default_name(&download, format.extension())));
 
     println!("{} ({}x{})", download.title, download.width, download.height);
@@ -197,7 +198,7 @@ fn scratch_path(output: &Path) -> PathBuf {
     PathBuf::from(name)
 }
 
-fn default_name(download: &Download<'_>, ext: &str) -> String {
+fn default_name(download: &Download, ext: &str) -> String {
     let title = sanitize(&download.title);
     let title = if title.is_empty() { "video" } else { &title };
 

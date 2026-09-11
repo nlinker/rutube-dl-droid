@@ -1,6 +1,8 @@
 mod pipeline;
 mod sink;
 
+use std::sync::Arc;
+
 use itertools::Itertools;
 pub use pipeline::run;
 pub use sink::Sink;
@@ -67,8 +69,8 @@ impl Default for DownloadOptions {
 /// Built in two phases on purpose: [`Download::probe`] settles everything without
 /// writing a byte, so a caller can name the output from `title` and the resolution
 /// before it opens the sink. [`Download::fetch`] then does the transfer.
-pub struct Download<'a> {
-    session: &'a Session,
+pub struct Download {
+    session: Arc<Session>,
     workers: usize,
     pub title: String,
     pub width: u32,
@@ -76,23 +78,23 @@ pub struct Download<'a> {
     pub segments: Vec<Segment>,
 }
 
-impl<'a> Download<'a> {
+impl Download {
     /// Resolve metadata, pick a variant, and collect the segment list.
     ///
     /// Refuses live streams and encrypted segments rather than producing a
     /// truncated or corrupt file.
-    pub async fn probe(session: &'a Session, video: &VideoRef, options: &DownloadOptions) -> Result<Self> {
-        let meta = api::play_options(session, video).await?;
-        let master = get_text(session, &meta.video_balancer.m3u8).await?;
+    pub async fn probe(session: Arc<Session>, video: &VideoRef, options: &DownloadOptions) -> Result<Self> {
+        let meta = api::play_options(&session, video).await?;
+        let master = get_text(&session, &meta.video_balancer.m3u8).await?;
         let variants = parse_master(&master)?;
         let variant = select(&variants, options.quality)?;
 
         // The playlist URL is also the base its segment URIs resolve against, so
         // both travel together. `reserve_uri` is the same quality on a second CDN.
-        let (base, media) = match fetch_playlist(session, &variant.uri).await {
+        let (base, media) = match fetch_playlist(&session, &variant.uri).await {
             Ok(found) => found,
             Err(primary) => match &variant.reserve_uri {
-                Some(reserve) => fetch_playlist(session, reserve).await.map_err(|_| primary)?,
+                Some(reserve) => fetch_playlist(&session, reserve).await.map_err(|_| primary)?,
                 None => return Err(primary),
             },
         };
@@ -128,7 +130,7 @@ impl<'a> Download<'a> {
     pub async fn fetch(&self, sink: &mut dyn Sink, progress: &dyn ProgressListener) -> Result<()> {
         let fetch_one = |index: usize| {
             let segment = self.segments[index].clone();
-            async move { get_bytes(self.session, &segment).await }
+            async move { get_bytes(&self.session, &segment).await }
         };
 
         run(self.segments.len(), self.workers, fetch_one, sink, progress).await
