@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["rutube-core", "rutube-cli", "vendor/ts-to-mp4"]
+members = ["rutube-core", "rutube-cli", "uniffi-bindgen", "vendor/ts-to-mp4"]
 
 [workspace.package]
 version = "0.1.0"
@@ -13,4 +13,5 @@ itertools = "0.15.0"
 thiserror = "2.0.20"
 ts-to-mp4 = { path = "vendor/ts-to-mp4" }
 rutube-core = { path = "rutube-core" }
+uniffi = "0.32.1"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time"] }
