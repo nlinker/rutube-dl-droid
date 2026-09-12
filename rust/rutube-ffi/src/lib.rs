@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
+use rutube_core::{Error, download, session::Session, url};
 
 uniffi::setup_scaffolding!();
-
-use rutube_core::{Error, download};
 
 /// Which variant to pick; mirrors [`download::Quality`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -87,5 +88,48 @@ impl From<Error> for RutubeError {
             Error::Encrypted { method } => Self::Encrypted { method },
             Error::Remux(message) => Self::Remux { message },
         }
+    }
+}
+
+/// This will be the listener of the download progress on the Kotlin side.
+/// The `onProgress` implementation must touch UI only from the Kotlin's main thread,
+/// not the current thread in the handler.
+#[uniffi::export(with_foreign)]
+pub trait ProgressListener: Send + Sync {
+    fn on_progress(&self, done: u64, total: u64);
+}
+
+/// Entry point: one per app, holds the HTTP session and cookies.
+#[derive(uniffi::Object)]
+pub struct Client {
+    session: Arc<Session>,
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+impl Client {
+    #[uniffi::constructor]
+    pub fn new() -> Result<Self, RutubeError> {
+        Ok(Self { session: Arc::new(Session::new()?) })
+    }
+
+    /// Resolve a URL down to a segment list without writing a byte.
+    pub async fn probe(&self, url: String, quality: Quality) -> Result<Download, RutubeError> {
+        let video = url::parse(&url)?;
+        let options = download::DownloadOptions { quality: quality.into(), ..Default::default() };
+        let inner = download::Download::probe(Arc::clone(&self.session), &video, &options).await?;
+        Ok(Download { inner })
+    }
+}
+
+/// A probed video, ready to download. Wraps [`download::Download`].
+#[derive(uniffi::Object)]
+pub struct Download {
+    inner: download::Download,
+}
+
+#[uniffi::export]
+impl Download {
+    pub fn info(&self) -> VideoInfo {
+        VideoInfo::from(&self.inner)
     }
 }
