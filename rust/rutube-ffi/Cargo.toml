@@ -1,0 +1,15 @@
+[package]
+name = "rutube-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+rutube-core.workspace = true
+thiserror.workspace = true
+uniffi.workspace = true

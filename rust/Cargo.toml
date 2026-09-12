@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["rutube-core", "rutube-cli", "uniffi-bindgen", "vendor/ts-to-mp4"]
+members = [
+    "rutube-core",
+    "rutube-cli",
+    "rutube-ffi",
+    "uniffi-bindgen",
+    "vendor/ts-to-mp4",
+]
 
 [workspace.package]
 version = "0.1.0"
