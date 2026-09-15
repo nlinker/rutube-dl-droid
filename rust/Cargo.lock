@@ -1480,7 +1480,9 @@ name = "rutube-ffi"
 version = "0.1.0"
 dependencies = [
  "rutube-core",
+ "tempfile",
  "thiserror",
+ "tokio",
  "uniffi",
 ]
 
