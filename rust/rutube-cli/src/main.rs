@@ -9,7 +9,6 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use itertools::Itertools;
 use rutube_core::{
     api,
     download::{Download, DownloadOptions, Quality},
@@ -55,11 +54,6 @@ impl FromStr for Format {
         }
     }
 }
-
-/// Punctuation kept as-is; everything outside this and letters, digits and spaces
-/// is replaced. An allowlist rather than a list of forbidden characters, so emoji
-/// and anything else exotic are covered without enumerating Unicode blocks.
-const KEPT_PUNCTUATION: &str = "-_.,()[]'!";
 
 #[derive(Parser)]
 #[command(name = "rutube-cli", about = "Download videos from Rutube")]
@@ -154,7 +148,7 @@ async fn download(
     let options = DownloadOptions { quality, workers };
 
     let download = Download::probe(session, &video, &options).await?;
-    let path = output.unwrap_or_else(|| PathBuf::from(default_name(&download, format.extension())));
+    let path = output.unwrap_or_else(|| PathBuf::from(download.file_name(format.extension())));
 
     println!("{} ({}x{})", download.title, download.width, download.height);
     println!("{} segments -> {}", download.segments.len(), path.display());
@@ -198,30 +192,6 @@ fn scratch_path(output: &Path) -> PathBuf {
     PathBuf::from(name)
 }
 
-fn default_name(download: &Download, ext: &str) -> String {
-    let title = sanitize(&download.title);
-    let title = if title.is_empty() { "video" } else { &title };
-
-    format!("{title} ({}x{}).{ext}", download.width, download.height)
-}
-
-/// Replace anything unsafe in a file name with `_`, collapsing runs.
-fn sanitize(title: &str) -> String {
-    title
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == ' ' || KEPT_PUNCTUATION.contains(c) {
-                c
-            } else {
-                '_'
-            }
-        })
-        .dedup_by(|a, b| *a == '_' && *b == '_')
-        .collect::<String>()
-        .trim_matches(|c: char| c == '_' || c.is_whitespace())
-        .to_owned()
-}
-
 struct Bar;
 
 impl ProgressListener for Bar {
@@ -230,32 +200,6 @@ impl ProgressListener for Bar {
         let _ = std::io::stderr().flush();
         if done == total {
             eprintln!();
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sanitize_titles() {
-        let cases = [
-            ("Nature 4k", "Nature 4k"),
-            ("Тест видео", "Тест видео"),
-            // Path separators and other reserved characters.
-            ("a/b:c*d?e", "a_b_c_d_e"),
-            // Emoji, including a multi-codepoint sequence, collapse to one `_`.
-            ("hello 👋👋 world", "hello _ world"),
-            ("Elden 🎮 Ring", "Elden _ Ring"),
-            // Leading and trailing junk is trimmed away entirely.
-            ("👋 hello 👋", "hello"),
-            ("///", ""),
-            ("", ""),
-        ];
-
-        for (input, expected) in cases {
-            assert_eq!(sanitize(input), expected, "{input:?}");
         }
     }
 }

@@ -9,4 +9,3 @@ license.workspace = true
 clap = { version = "4.6", features = ["derive"] }
 tokio.workspace = true
 rutube-core.workspace = true
-itertools.workspace = true

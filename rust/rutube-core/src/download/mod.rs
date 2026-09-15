@@ -19,6 +19,11 @@ use crate::{
 /// Attempts per segment before giving up.
 const RETRIES: usize = 3;
 
+/// Punctuation kept as-is; everything outside this and letters, digits and spaces
+/// is replaced. An allowlist rather than a list of forbidden characters, so emoji
+/// and anything else exotic are covered without enumerating Unicode blocks.
+const KEPT_PUNCTUATION: &str = "-_.,()[]'!";
+
 /// Exact vertical resolution, or automatic selection options
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Quality {
@@ -135,6 +140,31 @@ impl Download {
 
         run(self.segments.len(), self.workers, fetch_one, sink, progress).await
     }
+
+    /// `{title} ({width}x{height}).{ext}`, with the title made safe for a file
+    /// name. `title` == `video` when nothing of the title survives.
+    pub fn file_name(&self, ext: &str) -> String {
+        let title = sanitize(&self.title);
+        let title = if title.is_empty() { "video" } else { &title };
+        format!("{title} ({}x{}).{ext}", self.width, self.height)
+    }
+}
+
+/// Replace anything unsafe in a file name with `_`, collapsing runs.
+fn sanitize(title: &str) -> String {
+    title
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || KEPT_PUNCTUATION.contains(c) {
+                c
+            } else {
+                '_'
+            }
+        })
+        .dedup_by(|a, b| *a == '_' && *b == '_')
+        .collect::<String>()
+        .trim_matches(|c: char| c == '_' || c.is_whitespace())
+        .to_owned()
 }
 
 /// Variants arrive sorted worst to best, so the ends of the slice are the extremes.
@@ -216,5 +246,26 @@ mod tests {
         assert!(missing.contains("240, 720, 1080"), "{missing}");
 
         assert!(matches!(select(&[], Quality::Best), Err(Error::NoVariants)));
+    }
+
+    #[test]
+    fn sanitize_titles() {
+        let cases = [
+            ("Nature 4k", "Nature 4k"),
+            ("Тест видео", "Тест видео"),
+            // Path separators and other reserved characters.
+            ("a/b:c*d?e", "a_b_c_d_e"),
+            // Emoji, including a multi-codepoint sequence, collapse to one `_`.
+            ("hello 👋👋 world", "hello _ world"),
+            ("Elden 🎮 Ring", "Elden _ Ring"),
+            // Leading and trailing junk is trimmed away entirely.
+            ("👋 hello 👋", "hello"),
+            ("///", ""),
+            ("", ""),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(sanitize(input), expected, "{input:?}");
+        }
     }
 }
