@@ -29,12 +29,16 @@ impl From<Quality> for download::Quality {
 
 /// What a probe learns before a byte is written: enough to name the file
 /// and size a progress bar.
+///
+/// `file_name` == `{title} ({width}x{height}).mp4`,
+/// the `title` is sanitized so the `file_name` is ready for `createDocument`.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct VideoInfo {
     pub title: String,
     pub width: u32,
     pub height: u32,
     pub segments: u32,
+    pub file_name: String,
 }
 
 impl From<&download::Download> for VideoInfo {
@@ -44,6 +48,7 @@ impl From<&download::Download> for VideoInfo {
             width: download.width,
             height: download.height,
             segments: download.segments.len() as u32,
+            file_name: download.file_name("mp4"),
         }
     }
 }
