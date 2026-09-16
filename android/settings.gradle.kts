@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Rutube DL"
+rootProject.name = "rutube-dl-droid"
 include(":app")
