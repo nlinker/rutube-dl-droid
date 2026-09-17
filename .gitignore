@@ -9,3 +9,10 @@
 
 # IDE
 .idea/
+
+# Android
+/android/local.properties
+/android/.gradle/
+/android/build/
+/android/*/build/
+/android/.kotlin/
