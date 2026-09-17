@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "rutube-dl-droid"
 include(":app")
+include(":bindings")
