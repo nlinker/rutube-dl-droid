@@ -1,0 +1,8 @@
+[bindings.kotlin]
+package_name = "io.github.nlinker.rutubedl.bindings"
+# Records are snapshots; nothing on the Kotlin side should edit them.
+generate_immutable_records = true
+# Android-specific loader tweaks and @Keep annotations for R8.
+android = true
+# Free Rust objects through android.system.SystemCleaner rather than the JVM one.
+android_cleaner = true
