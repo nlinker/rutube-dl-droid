@@ -11,7 +11,7 @@ gradlew :app:installDebug
 This command builds everything:
 - `cargo build` for arm64,
 - bindgen
-- compile Kotlin (both generated and `MainActivity.kt`)
+- compile Kotlin (both generated and `app/src/*.kt`)
 - assembles APK
 - adb install
 
