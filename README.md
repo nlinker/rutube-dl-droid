@@ -2,6 +2,27 @@
 
 An Android app with the core in Rust.
 
+## Build the whole application with Gradle (and debug)
+
+```bash
+gradlew :app:installDebug
+```
+
+This command builds everything:
+- `cargo build` for arm64,
+- bindgen
+- compile Kotlin (both generated and `MainActivity.kt`)
+- assembles APK
+- adb install
+
+To just build APK (without adb install) - `gradlew :app:assembleDebug`
+
+To run with `adb` and view logs (connect to the phone with USB cable):
+```bash
+adb shell am start -n io.github.nlinker.rutubedl/.MainActivity
+adb logcat -s AndroidRuntime:E  # show errors only
+```
+
 ## Build rust stuff
 
 To generate and view Kotlin bindings:
@@ -13,7 +34,7 @@ cargo run -p uniffi-bindgen -- generate --library target/debug/rutube_ffi.dll --
 
 Then view `../tmp/kt/uniffi/rutube_ffi/rutube_ffi.kt` - this is generated Kotlin file
 
-## Build android target
+## Build Rust for Android with `cargo-ndk`
 
 ### Setup
 
