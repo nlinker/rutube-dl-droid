@@ -30,8 +30,9 @@ impl From<Quality> for download::Quality {
 /// What a probe learns before a byte is written: enough to name the file
 /// and size a progress bar.
 ///
-/// `file_name` == `{title} ({width}x{height}).mp4`,
-/// the `title` is sanitized so the `file_name` is ready for `createDocument`.
+/// The `title` is the raw video title (with emoji and other stuff), but
+/// `file_name` is `{sanitized(title)} ({width}x{height}).mp4`,
+/// so the `file_name` is ready for `createDocument`.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct VideoInfo {
     pub title: String,
@@ -54,10 +55,12 @@ impl From<&download::Download> for VideoInfo {
 }
 
 /// Mirror of [`rutube_core::Error`] with every foreign payload flattened to a string.
+/// The payload is `detail`, not `message`: the generated Kotlin class extends
+/// `kotlin.Exception`, and its `message` field would clash otherwise.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, uniffi::Error)]
 pub enum RutubeError {
-    #[error("http request failed: {message}")]
-    Http { message: String },
+    #[error("http request failed: {detail}")]
+    Http { detail: String },
     #[error("unsupported url: {url}")]
     UnsupportedUrl { url: String },
     #[error("video not found or unavailable")]
@@ -66,10 +69,10 @@ pub enum RutubeError {
     Forbidden,
     #[error("could not parse {what}: {detail}")]
     Parse { what: String, detail: String },
-    #[error("cookie store: {message}")]
-    Cookies { message: String },
-    #[error("io: {message}")]
-    Io { message: String },
+    #[error("cookie store: {detail}")]
+    Cookies { detail: String },
+    #[error("io: {detail}")]
+    Io { detail: String },
     #[error("master playlist has no usable variants")]
     NoVariants,
     #[error("no {wanted}p variant; available: {available}")]
@@ -78,25 +81,25 @@ pub enum RutubeError {
     LiveStream,
     #[error("segments are {method} encrypted, which is not supported yet")]
     Encrypted { method: String },
-    #[error("remux: {message}")]
-    Remux { message: String },
+    #[error("remux: {detail}")]
+    Remux { detail: String },
 }
 
 impl From<Error> for RutubeError {
     fn from(error: Error) -> Self {
         match error {
-            Error::Http(e) => Self::Http { message: e.to_string() },
+            Error::Http(e) => Self::Http { detail: e.to_string() },
             Error::UnsupportedUrl(url) => Self::UnsupportedUrl { url },
             Error::NotFound => Self::NotFound,
             Error::Forbidden => Self::Forbidden,
             Error::Parse { what, detail } => Self::Parse { what: what.to_owned(), detail },
-            Error::Cookies(message) => Self::Cookies { message },
-            Error::Io(e) => Self::Io { message: e.to_string() },
+            Error::Cookies(detail) => Self::Cookies { detail },
+            Error::Io(e) => Self::Io { detail: e.to_string() },
             Error::NoVariants => Self::NoVariants,
             Error::NoSuchResolution { wanted, available } => Self::NoSuchResolution { wanted, available },
             Error::LiveStream => Self::LiveStream,
             Error::Encrypted { method } => Self::Encrypted { method },
-            Error::Remux(message) => Self::Remux { message },
+            Error::Remux(detail) => Self::Remux { detail },
         }
     }
 }
@@ -175,7 +178,7 @@ impl Download {
         // remux::to_mp4 is I/O sync, that's why it needs spawn_blocking.
         tokio::task::spawn_blocking(move || remux::to_mp4(BufReader::new(scratch), &mut output))
             .await
-            .map_err(|e| RutubeError::Remux { message: e.to_string() })??;
+            .map_err(|e| RutubeError::Remux { detail: e.to_string() })??;
         Ok(())
     }
 }
@@ -190,7 +193,7 @@ fn file_from_fd(fd: i32) -> Result<File, RutubeError> {
 
 #[cfg(not(unix))]
 fn file_from_fd(_fd: i32) -> Result<File, RutubeError> {
-    Err(RutubeError::Io { message: "file descriptors are only supported on unix".to_owned() })
+    Err(RutubeError::Io { detail: "file descriptors are only supported on unix".to_owned() })
 }
 
 /// Forwards core progress to the foreign listener. This is a newtype because the core
