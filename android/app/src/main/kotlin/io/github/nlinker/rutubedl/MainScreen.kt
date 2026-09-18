@@ -40,15 +40,7 @@ fun MainScreen(viewModel: MainViewModel) {
             )
 
             Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QUALITIES.forEach { quality ->
-                    FilterChip(
-                        selected = state.quality == quality,
-                        onClick = { viewModel.setQuality(quality) },
-                        label = { Text(qualityLabel(quality), maxLines = 1) },
-                    )
-                }
-            }
+            QualityChips(selected = state.quality, onSelect = viewModel::setQuality)
 
             Button(onClick = viewModel::probe, enabled = state.probe != ProbeState.Loading) {
                 Text(stringResource(R.string.probe))
