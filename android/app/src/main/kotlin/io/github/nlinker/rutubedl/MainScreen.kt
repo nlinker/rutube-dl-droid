@@ -1,32 +1,54 @@
 package io.github.nlinker.rutubedl
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nlinker.rutubedl.bindings.Quality
 
-// Qualities offered as chips; other heights are not reachable from the UI yet.
-private val QUALITIES = listOf(Quality.Worst, Quality.Height(720u), Quality.Height(1080u), Quality.Best)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
 
-    Scaffold { innerPadding ->
+    // First run: no folder saved yet, so open the picker before anything else.
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree(), viewModel::pickFolder)
+    LaunchedEffect(Unit) {
+        viewModel.promptFolder.collect { pickFolder.launch(null) }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    IconButton(onClick = viewModel::openSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -61,13 +83,19 @@ fun MainScreen(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.error,
                 )
             }
+
+            if (settings != null && settings?.folder == null) {
+                FolderPrompt(rejected = state.folderRejected, onPick = { pickFolder.launch(null) })
+            }
         }
     }
 }
 
+// Shown while no usable folder is saved; the download button will hang off this later.
 @Composable
-private fun qualityLabel(quality: Quality): String = when (quality) {
-    Quality.Worst -> stringResource(R.string.quality_worst)
-    Quality.Best -> stringResource(R.string.quality_best)
-    is Quality.Height -> "${quality.height}p"
+private fun FolderPrompt(rejected: Boolean, onPick: () -> Unit) {
+    if (rejected) {
+        Text(stringResource(R.string.folder_not_local), color = MaterialTheme.colorScheme.error)
+    }
+    Button(onClick = onPick) { Text(stringResource(R.string.folder_pick)) }
 }
