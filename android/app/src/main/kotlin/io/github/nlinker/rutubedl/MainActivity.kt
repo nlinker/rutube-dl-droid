@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -14,8 +16,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         acceptSharedUrl(intent)
         setContent {
+            val state by viewModel.state.collectAsStateWithLifecycle()
             MaterialTheme {
-                MainScreen(viewModel)
+                // Two screens, one activity: a flag in the ViewModel is enough,
+                // and it survives rotation for free.
+                if (state.showSettings) SettingsScreen(viewModel) else MainScreen(viewModel)
             }
         }
     }

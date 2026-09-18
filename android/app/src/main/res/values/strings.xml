@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Rutube DL</string>
+    <string name="settings">Настройки</string>
+    <string name="back">Назад</string>
+
     <string name="url_label">Ссылка на видео</string>
     <string name="quality_label">Качество</string>
     <string name="quality_worst">худшее</string>
@@ -11,4 +14,10 @@
     <string name="info_segments">Сегментов: %1$d</string>
     <string name="info_file_name">Файл: %1$s</string>
     <string name="error_prefix">Ошибка: %1$s</string>
+
+    <string name="folder_label">Папка для загрузок</string>
+    <string name="folder_none">не выбрана</string>
+    <string name="folder_pick">Выбрать папку</string>
+    <string name="folder_not_local">Нужна папка во внутренней памяти или на SD-карте: в облачные хранилища записать видео нельзя.</string>
+    <string name="default_quality_label">Качество по-умолчанию</string>
 </resources>

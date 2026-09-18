@@ -7,4 +7,5 @@ import io.github.nlinker.rutubedl.bindings.Client
 // download service will need the same one the screen used to probe.
 class App : Application() {
     val client: Client by lazy { Client() }
+    val settings: Settings by lazy { Settings(this) }
 }
