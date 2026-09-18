@@ -2,7 +2,7 @@ package io.github.nlinker.rutubedl
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -40,12 +40,12 @@ fun MainScreen(viewModel: MainViewModel) {
             )
 
             Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QUALITIES.forEach { quality ->
                     FilterChip(
                         selected = state.quality == quality,
                         onClick = { viewModel.setQuality(quality) },
-                        label = { Text(qualityLabel(quality)) },
+                        label = { Text(qualityLabel(quality), maxLines = 1) },
                     )
                 }
             }
