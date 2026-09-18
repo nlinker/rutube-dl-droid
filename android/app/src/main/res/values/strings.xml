@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Rutube DL</string>
+    <string name="url_label">Ссылка на видео</string>
+    <string name="quality_label">Качество</string>
+    <string name="quality_worst">худшее</string>
+    <string name="quality_best">лучшее</string>
+    <string name="probe">Проверить</string>
+    <string name="probing">Проверяем…</string>
+    <string name="info_resolution">Разрешение: %1$d×%2$d</string>
+    <string name="info_segments">Сегментов: %1$d</string>
+    <string name="info_file_name">Файл: %1$s</string>
+    <string name="error_prefix">Ошибка: %1$s</string>
 </resources>
