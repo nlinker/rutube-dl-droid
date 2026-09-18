@@ -1,14 +1,21 @@
 package io.github.nlinker.rutubedl
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.nlinker.rutubedl.bindings.Quality
 import io.github.nlinker.rutubedl.bindings.RutubeException
 import io.github.nlinker.rutubedl.bindings.VideoInfo
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -23,17 +30,63 @@ data class MainUiState(
     val url: String = "",
     val quality: Quality = Quality.Worst,
     val probe: ProbeState = ProbeState.Idle,
+    val showSettings: Boolean = false,
+    // The last picked folder came from a provider we cannot seek in.
+    val folderRejected: Boolean = false,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val client = (app as App).client
+    private val settings = (app as App).settings
+    private val resolver = app.contentResolver
 
     private val _state = MutableStateFlow(MainUiState())
     val state: StateFlow<MainUiState> = _state
 
+    // Null until DataStore has been read once.
+    val settingsState: StateFlow<AppSettings?> =
+        settings.flow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // Fires once per process when there is no folder yet: the screen opens the picker.
+    private val _promptFolder = Channel<Unit>(Channel.CONFLATED)
+    val promptFolder = _promptFolder.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            val saved = settings.flow.first()
+            _state.update { it.copy(quality = saved.quality) }
+            if (saved.folder == null) _promptFolder.send(Unit)
+        }
+    }
+
     fun setUrl(url: String) = _state.update { it.copy(url = url) }
 
     fun setQuality(quality: Quality) = _state.update { it.copy(quality = quality) }
+
+    fun setDefaultQuality(quality: Quality) {
+        viewModelScope.launch { settings.setQuality(quality) }
+    }
+
+    fun openSettings() = _state.update { it.copy(showSettings = true) }
+
+    fun closeSettings() = _state.update { it.copy(showSettings = false) }
+
+    // Result of ACTION_OPEN_DOCUMENT_TREE; null when the user backed out.
+    fun pickFolder(uri: Uri?) {
+        if (uri == null) return
+        // Only the local provider gives seekable files; the remux needs to seek.
+        if (uri.authority != LOCAL_AUTHORITY) {
+            _state.update { it.copy(folderRejected = true) }
+            return
+        }
+        // Keep the grant across reboots, otherwise the Uri dies with the picker activity.
+        resolver.takePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+        )
+        _state.update { it.copy(folderRejected = false) }
+        viewModelScope.launch { settings.setFolder(uri) }
+    }
 
     fun probe() {
         val current = _state.value
@@ -52,5 +105,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         const val TAG = "RutubeDL"
+        const val LOCAL_AUTHORITY = "com.android.externalstorage.documents"
     }
 }
