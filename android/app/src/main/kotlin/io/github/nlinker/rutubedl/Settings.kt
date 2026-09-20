@@ -32,6 +32,8 @@ class Settings(context: Context) {
 
     suspend fun setFolder(uri: Uri) = store.edit { it[FOLDER] = uri.toString() }
 
+    suspend fun clearFolder() = store.edit { it.remove(FOLDER) }
+
     suspend fun setQuality(quality: Quality) = store.edit { it[QUALITY] = formatQuality(quality) }
 
     private companion object {

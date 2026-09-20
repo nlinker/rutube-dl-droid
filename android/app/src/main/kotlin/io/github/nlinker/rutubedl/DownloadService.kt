@@ -15,7 +15,8 @@ import android.provider.DocumentsContract
 import android.util.Log
 import io.github.nlinker.rutubedl.bindings.ProgressListener
 import io.github.nlinker.rutubedl.bindings.Quality
-import io.github.nlinker.rutubedl.bindings.RutubeException
+import java.io.FileNotFoundException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -77,16 +78,22 @@ class DownloadService : Service() {
             download.save(fd, cacheDir.absolutePath, Listener(info.title))
 
             Downloads.set(DownloadState.Done(info.fileName, document))
-        } catch (e: RutubeException) {
+        } catch (e: CancellationException) {
+            // The user stopped it: not an error, but the half-written output must be deleted.
+            discard(document)
+            Downloads.set(DownloadState.Idle)
+            throw e
+        } catch (e: FileNotFoundException) {
+            // The chosen folder is gone, forget it.
+            Log.w(TAG, "download folder is missing", e)
+            (application as App).settings.clearFolder()
+            Downloads.set(DownloadState.Failed(getString(R.string.folder_missing)))
+        } catch (e: Exception) {
+            // RutubeException from Rust or anything else: never let it out of the
+            // coroutine, an uncaught exception here takes the whole process down.
             Log.w(TAG, "download failed", e)
             discard(document)
-            Downloads.set(DownloadState.Failed(e.toString()))
-        } catch (e: Exception) {
-            // Cancellation lands here too: the half-written document has to go.
-            Log.w(TAG, "download stopped", e)
-            discard(document)
-            if (Downloads.state.value is DownloadState.Running) Downloads.set(DownloadState.Idle)
-            throw e
+            Downloads.set(DownloadState.Failed(e.message ?: e.toString()))
         }
     }
 
