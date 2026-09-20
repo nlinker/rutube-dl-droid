@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -52,11 +54,16 @@ fun SettingsScreen(viewModel: MainViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.folder_label), style = MaterialTheme.typography.labelLarge)
-            Text(settings?.folder?.let(::folderLabel) ?: stringResource(R.string.folder_none))
+            Text(settings?.folder?.let(::folderLabel) ?: stringResource(R.string.folder_default))
             if (state.folderRejected) {
                 Text(stringResource(R.string.folder_not_local), color = MaterialTheme.colorScheme.error)
             }
-            Button(onClick = { pickFolder.launch(settings?.folder) }) { Text(stringResource(R.string.folder_pick)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { pickFolder.launch(settings?.folder) }) { Text(stringResource(R.string.folder_pick)) }
+                if (settings?.folder != null) {
+                    OutlinedButton(onClick = viewModel::resetFolder) { Text(stringResource(R.string.folder_reset)) }
+                }
+            }
 
             Text(stringResource(R.string.default_quality_label), style = MaterialTheme.typography.labelLarge)
             QualityChips(selected = settings?.quality ?: state.quality, onSelect = viewModel::setDefaultQuality)

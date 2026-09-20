@@ -89,6 +89,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { settings.setFolder(uri) }
     }
 
+    // Back to the system Download collection.
+    fun resetFolder() {
+        _state.update { it.copy(folderRejected = false) }
+        viewModelScope.launch { settings.clearFolder() }
+    }
+
     val downloadState: StateFlow<DownloadState> = Downloads.state
 
     fun startDownload(context: Context) {

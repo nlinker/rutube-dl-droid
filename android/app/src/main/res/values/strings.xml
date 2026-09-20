@@ -16,7 +16,8 @@
     <string name="error_prefix">Ошибка: %1$s</string>
 
     <string name="folder_label">Папка для загрузок</string>
-    <string name="folder_none">не выбрана</string>
+    <string name="folder_default">Download (по умолчанию)</string>
+    <string name="folder_reset">По умолчанию</string>
     <string name="folder_pick">Выбрать папку</string>
     <string name="folder_missing">Папка для загрузок исчезла. Выберите другую.</string>
     <string name="folder_not_local">Нужна папка во внутренней памяти или на SD-карте: в облачные хранилища записать видео нельзя.</string>
