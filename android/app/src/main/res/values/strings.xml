@@ -20,4 +20,14 @@
     <string name="folder_pick">Выбрать папку</string>
     <string name="folder_not_local">Нужна папка во внутренней памяти или на SD-карте: в облачные хранилища записать видео нельзя.</string>
     <string name="default_quality_label">Качество по-умолчанию</string>
+
+    <string name="download">Скачать</string>
+    <string name="cancel">Отмена</string>
+    <string name="notification_channel">Загрузки</string>
+    <string name="notification_progress">%1$d из %2$d сегментов</string>
+    <string name="download_progress">Скачано %1$d из %2$d сегментов</string>
+    <string name="download_starting">Начинаем…</string>
+    <string name="download_done">Готово: %1$s</string>
+    <string name="open">Открыть</string>
+    <string name="notifications_denied">Без разрешения на уведомления прогресс виден только на этом экране.</string>
 </resources>
