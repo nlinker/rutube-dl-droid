@@ -48,17 +48,28 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
                     IconButton(onClick = viewModel::openSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings)
+                        )
                     }
                 },
             )
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
@@ -69,7 +80,10 @@ fun MainScreen(viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
+            Text(
+                stringResource(R.string.quality_label),
+                style = MaterialTheme.typography.labelLarge
+            )
             QualityChips(selected = state.quality, onSelect = viewModel::setQuality)
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -96,7 +110,13 @@ fun MainScreen(viewModel: MainViewModel) {
                 is ProbeState.Done -> {
                     val info = probe.info
                     Text(info.title, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.info_resolution, info.width.toInt(), info.height.toInt()))
+                    Text(
+                        stringResource(
+                            R.string.info_resolution,
+                            info.width.toInt(),
+                            info.height.toInt()
+                        )
+                    )
                     Text(stringResource(R.string.info_segments, info.segments.toInt()))
                     Text(stringResource(R.string.info_file_name, info.fileName))
                 }
