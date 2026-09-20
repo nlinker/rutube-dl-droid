@@ -10,7 +10,7 @@ android {
     ndkVersion = "30.0.15729638"
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
     }
 
     compileOptions {
@@ -27,7 +27,7 @@ cargo {
     libname = "rutube_ffi"
     targets = listOf("arm64")
     // The API level the NDK links against; keep it equal to minSdk above.
-    apiLevel = 24
+    apiLevel = 26
     // Release even in debug builds: the debug library is 145 MB of symbols we
     // cannot read on the device anyway, and Rust is debugged on the desktop.
     profile = "release"
