@@ -1,6 +1,7 @@
 package io.github.nlinker.rutubedl
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -87,6 +88,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(folderRejected = false) }
         viewModelScope.launch { settings.setFolder(uri) }
     }
+
+    val downloadState: StateFlow<DownloadState> = Downloads.state
+
+    fun startDownload(context: Context) {
+        val current = _state.value
+        val folder = settingsState.value?.folder ?: return
+        if (current.url.isBlank()) return
+        DownloadService.start(context, current.url.trim(), current.quality, folder)
+    }
+
+    fun cancelDownload(context: Context) = DownloadService.cancel(context)
 
     fun probe() {
         val current = _state.value

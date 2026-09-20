@@ -1,9 +1,13 @@
 package io.github.nlinker.rutubedl
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -12,7 +16,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,7 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -30,12 +38,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val settings by viewModel.settingsState.collectAsStateWithLifecycle()
+    val download by viewModel.downloadState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // First run: no folder saved yet, so open the picker before anything else.
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree(), viewModel::pickFolder)
     LaunchedEffect(Unit) {
         viewModel.promptFolder.collect { pickFolder.launch(null) }
     }
+
+    // The notification carries the progress bar, so ask before the first download.
+    val askNotifications =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            viewModel.startDownload(context)
+        }
 
     Scaffold(
         topBar = {
@@ -64,8 +80,22 @@ fun MainScreen(viewModel: MainViewModel) {
             Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
             QualityChips(selected = state.quality, onSelect = viewModel::setQuality)
 
-            Button(onClick = viewModel::probe, enabled = state.probe != ProbeState.Loading) {
-                Text(stringResource(R.string.probe))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = viewModel::probe, enabled = state.probe != ProbeState.Loading) {
+                    Text(stringResource(R.string.probe))
+                }
+                Button(
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            viewModel.startDownload(context)
+                        }
+                    },
+                    enabled = settings?.folder != null && download !is DownloadState.Running,
+                ) {
+                    Text(stringResource(R.string.download))
+                }
             }
 
             when (val probe = state.probe) {
@@ -78,8 +108,28 @@ fun MainScreen(viewModel: MainViewModel) {
                     Text(stringResource(R.string.info_segments, info.segments.toInt()))
                     Text(stringResource(R.string.info_file_name, info.fileName))
                 }
+
                 is ProbeState.Failed -> Text(
                     stringResource(R.string.error_prefix, probe.message),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            when (val current = download) {
+                DownloadState.Idle -> {}
+                is DownloadState.Running -> DownloadProgress(
+                    current,
+                    onCancel = { viewModel.cancelDownload(context) })
+
+                is DownloadState.Done -> {
+                    Text(stringResource(R.string.download_done, current.name))
+                    OutlinedButton(onClick = { context.startActivity(view(current)) }) {
+                        Text(stringResource(R.string.open))
+                    }
+                }
+
+                is DownloadState.Failed -> Text(
+                    stringResource(R.string.error_prefix, current.message),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -91,7 +141,23 @@ fun MainScreen(viewModel: MainViewModel) {
     }
 }
 
-// Shown while no usable folder is saved; the download button will hang off this later.
+@Composable
+private fun DownloadProgress(state: DownloadState.Running, onCancel: () -> Unit) {
+    Text(state.title, style = MaterialTheme.typography.titleMedium)
+    if (state.total == 0) {
+        Text(stringResource(R.string.download_starting))
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    } else {
+        Text(stringResource(R.string.download_progress, state.done, state.total))
+        LinearProgressIndicator(
+            progress = { state.done.toFloat() / state.total },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+}
+
+// Shown while no usable folder is saved; the download button stays disabled until then.
 @Composable
 private fun FolderPrompt(rejected: Boolean, onPick: () -> Unit) {
     if (rejected) {
@@ -99,3 +165,8 @@ private fun FolderPrompt(rejected: Boolean, onPick: () -> Unit) {
     }
     Button(onClick = onPick) { Text(stringResource(R.string.folder_pick)) }
 }
+
+private fun view(done: DownloadState.Done): Intent =
+    Intent(Intent.ACTION_VIEW)
+        .setDataAndType(done.uri, "video/mp4")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
