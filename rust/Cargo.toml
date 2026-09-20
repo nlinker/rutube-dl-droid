@@ -18,6 +18,8 @@ license = "AGPL-3.0"
 itertools = "0.15.0"
 thiserror = "2.0.20"
 tempfile = "3.27.0"
+rustls = "0.23.43"
+webpki-roots = "1.0.9"
 ts-to-mp4 = { path = "vendor/ts-to-mp4" }
 rutube-core = { path = "rutube-core" }
 uniffi = { version = "0.32.1", features = ["cli", "tokio"] }
