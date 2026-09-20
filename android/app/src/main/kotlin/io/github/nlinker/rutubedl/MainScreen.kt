@@ -24,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,15 +36,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val download by viewModel.downloadState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
-    // First run: no folder saved yet, so open the picker before anything else.
-    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree(), viewModel::pickFolder)
-    LaunchedEffect(Unit) {
-        viewModel.promptFolder.collect { pickFolder.launch(null) }
-    }
 
     // The notification carries the progress bar, so ask before the first download.
     val askNotifications =
@@ -92,7 +84,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             viewModel.startDownload(context)
                         }
                     },
-                    enabled = settings?.folder != null && download !is DownloadState.Running,
+                    enabled = state.url.isNotBlank() && download !is DownloadState.Running,
                 ) {
                     Text(stringResource(R.string.download))
                 }
@@ -133,10 +125,6 @@ fun MainScreen(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-
-            if (settings != null && settings?.folder == null) {
-                FolderPrompt(rejected = state.folderRejected, onPick = { pickFolder.launch(null) })
-            }
         }
     }
 }
@@ -155,15 +143,6 @@ private fun DownloadProgress(state: DownloadState.Running, onCancel: () -> Unit)
         )
     }
     OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-}
-
-// Shown while no usable folder is saved; the download button stays disabled until then.
-@Composable
-private fun FolderPrompt(rejected: Boolean, onPick: () -> Unit) {
-    if (rejected) {
-        Text(stringResource(R.string.folder_not_local), color = MaterialTheme.colorScheme.error)
-    }
-    Button(onClick = onPick) { Text(stringResource(R.string.folder_pick)) }
 }
 
 private fun view(done: DownloadState.Done): Intent =

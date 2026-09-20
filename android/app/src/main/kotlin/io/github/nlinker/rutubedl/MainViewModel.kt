@@ -10,12 +10,10 @@ import androidx.lifecycle.viewModelScope
 import io.github.nlinker.rutubedl.bindings.Quality
 import io.github.nlinker.rutubedl.bindings.RutubeException
 import io.github.nlinker.rutubedl.bindings.VideoInfo
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,15 +46,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val settingsState: StateFlow<AppSettings?> =
         settings.flow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    // Fires once per process when there is no folder yet: the screen opens the picker.
-    private val _promptFolder = Channel<Unit>(Channel.CONFLATED)
-    val promptFolder = _promptFolder.receiveAsFlow()
-
     init {
         viewModelScope.launch {
             val saved = settings.flow.first()
             _state.update { it.copy(quality = saved.quality) }
-            if (saved.folder == null) _promptFolder.send(Unit)
         }
     }
 
@@ -99,9 +92,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startDownload(context: Context) {
         val current = _state.value
-        val folder = settingsState.value?.folder ?: return
         if (current.url.isBlank()) return
-        DownloadService.start(context, current.url.trim(), current.quality, folder)
+        DownloadService.start(context, current.url.trim(), current.quality, settingsState.value?.folder)
     }
 
     fun cancelDownload(context: Context) = DownloadService.cancel(context)

@@ -169,11 +169,11 @@ class DownloadService : Service() {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
-        fun start(context: Context, url: String, quality: Quality, folder: Uri) {
+        fun start(context: Context, url: String, quality: Quality, folder: Uri?) {
             val intent = Intent(context, DownloadService::class.java)
                 .putExtra(EXTRA_URL, url)
                 .putExtra(EXTRA_QUALITY, formatQuality(quality))
-                .putExtra(EXTRA_FOLDER, folder.toString())
+                .putExtra(EXTRA_FOLDER, folder?.toString())
             context.startForegroundService(intent)
         }
 
