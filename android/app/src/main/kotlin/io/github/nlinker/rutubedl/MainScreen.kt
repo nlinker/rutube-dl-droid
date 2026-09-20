@@ -56,7 +56,7 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = { Text(text = stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = viewModel::openSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))

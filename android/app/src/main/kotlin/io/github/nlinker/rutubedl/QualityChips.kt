@@ -14,7 +14,7 @@ private val QUALITIES = listOf(Quality.Worst, Quality.Height(720u), Quality.Heig
 
 @Composable
 fun QualityChips(selected: Quality, onSelect: (Quality) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         QUALITIES.forEach { quality ->
             FilterChip(
                 selected = selected == quality,
