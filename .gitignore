@@ -3,6 +3,7 @@
 
 # Scratch space
 /tmp/
+/docs/todo/
 
 # Rust
 /rust/target/
