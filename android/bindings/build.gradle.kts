@@ -69,7 +69,7 @@ abstract class GenerateBindings : DefaultTask() {
     }
 }
 
-val generateBindings by tasks.registering(GenerateBindings::class) {
+val generateBindings = tasks.register<GenerateBindings>("generateBindings") {
     dependsOn("cargoBuild")
     library = layout.buildDirectory.file("rustJniLibs/android/arm64-v8a/librutube_ffi.so")
     config = layout.file(provider { rootDir.parentFile.resolve("rust/rutube-ffi/uniffi.toml") })
