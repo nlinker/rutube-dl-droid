@@ -8,4 +8,9 @@ import io.github.nlinker.rutubedl.bindings.Client
 class App : Application() {
     val client: Client by lazy { Client() }
     val settings: Settings by lazy { Settings(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        DownloadService.createChannel(this)
+    }
 }
