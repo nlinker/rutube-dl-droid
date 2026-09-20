@@ -49,7 +49,11 @@ class DownloadService : Service() {
         if (job?.isActive == true) return START_NOT_STICKY
 
         Downloads.set(DownloadState.Running(title = url, done = 0, total = 0))
-        startForeground(NOTIFICATION_ID, notification(url, 0, 0), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        startForeground(
+            NOTIFICATION_ID,
+            notification(url, 0, 0),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        )
         job = scope.launch {
             // try-finally: the service must stop regardless of the download result.
             try {
@@ -72,10 +76,19 @@ class DownloadService : Service() {
         try {
             val download = client.probe(url, quality)
             val info = download.info()
-            Downloads.set(DownloadState.Running(info.title, done = 0, total = info.segments.toInt()))
+            Downloads.set(
+                DownloadState.Running(
+                    info.title,
+                    done = 0,
+                    total = info.segments.toInt()
+                )
+            )
             notify(notification(info.title, 0, info.segments.toInt()))
 
-            target = if (folder == null) createInDownloads(info.fileName) else createDocument(folder, info.fileName)
+            target = if (folder == null) createInDownloads(info.fileName) else createDocument(
+                folder,
+                info.fileName
+            )
             // Rust owns the descriptor from here on, so it must be detached.
             val fd = contentResolver.openFileDescriptor(target.uri, "rw")!!.detachFd()
             download.save(fd, cacheDir.absolutePath, Listener(info.title))
@@ -112,7 +125,11 @@ class DownloadService : Service() {
         }
 
         fun discard() = runCatching {
-            if (pending) contentResolver.delete(uri, null, null) else DocumentsContract.deleteDocument(contentResolver, uri)
+            if (pending) contentResolver.delete(
+                uri,
+                null,
+                null
+            ) else DocumentsContract.deleteDocument(contentResolver, uri)
         }
     }
 
@@ -132,7 +149,10 @@ class DownloadService : Service() {
     // A folder the user picked through SAF. The tree Uri names a grant, not a
     // directory; the document Uri of its root is what createDocument wants.
     private fun createDocument(folder: Uri, name: String): Target {
-        val parent = DocumentsContract.buildDocumentUriUsingTree(folder, DocumentsContract.getTreeDocumentId(folder))
+        val parent = DocumentsContract.buildDocumentUriUsingTree(
+            folder,
+            DocumentsContract.getTreeDocumentId(folder)
+        )
         val uri = DocumentsContract.createDocument(contentResolver, parent, "video/mp4", name)
             ?: error("could not create $name in the chosen folder")
         return Target(uri, pending = false)
@@ -168,7 +188,9 @@ class DownloadService : Service() {
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setProgress(total, done, total == 0)
             .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, getString(R.string.cancel), cancel).build())
+            .addAction(
+                Notification.Action.Builder(null, getString(R.string.cancel), cancel).build()
+            )
             .build()
     }
 
@@ -187,7 +209,8 @@ class DownloadService : Service() {
                 context.getString(R.string.notification_channel),
                 NotificationManager.IMPORTANCE_LOW,
             )
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            context.getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
         }
 
         fun start(context: Context, url: String, quality: Quality, folder: Uri?) {
@@ -199,7 +222,11 @@ class DownloadService : Service() {
         }
 
         fun cancel(context: Context) {
-            context.startService(Intent(context, DownloadService::class.java).setAction(ACTION_CANCEL))
+            context.startService(
+                Intent(context, DownloadService::class.java).setAction(
+                    ACTION_CANCEL
+                )
+            )
         }
     }
 }
