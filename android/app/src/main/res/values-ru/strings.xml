@@ -11,9 +11,7 @@
     <string name="quality_row">%1$s (%2$dp) · %3$s</string>
     <string name="probe">Проверить</string>
     <string name="probing">Проверяем…</string>
-    <string name="info_resolution">Разрешение: %1$d×%2$d</string>
     <string name="info_segments">Сегментов: %1$d</string>
-    <string name="info_file_name">Файл: %1$s</string>
     <string name="error_prefix">Ошибка: %1$s</string>
 
     <string name="folder_label">Папка для загрузок</string>
