@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rutube DL</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+
+    <string name="url_label">Video link</string>
+    <string name="quality_label">Quality</string>
+    <string name="quality_worst">worst</string>
+    <string name="quality_best">best</string>
+    <string name="probe">Check</string>
+    <string name="probing">Checking…</string>
+    <string name="info_resolution">Resolution: %1$d×%2$d</string>
+    <string name="info_segments">Segments: %1$d</string>
+    <string name="info_file_name">File: %1$s</string>
+    <string name="error_prefix">Error: %1$s</string>
+
+    <string name="folder_label">Download folder</string>
+    <string name="folder_default">Download (default)</string>
+    <string name="folder_reset">Default</string>
+    <string name="folder_pick">Choose folder</string>
+    <string name="folder_missing">The download folder is gone. Choose another one.</string>
+    <string name="folder_not_local">Choose a folder on internal storage or the SD card: videos cannot be written to cloud storage.</string>
+    <string name="default_quality_label">Default quality</string>
+
+    <string name="download">Download</string>
+    <string name="cancel">Cancel</string>
+    <string name="notification_channel">Downloads</string>
+    <string name="notification_progress">%1$d of %2$d segments</string>
+    <string name="download_progress">Downloaded %1$d of %2$d segments</string>
+    <string name="download_starting">Starting…</string>
+    <string name="download_done">Done: %1$s</string>
+    <string name="open">Open</string>
+    <string name="notifications_denied">Without the notification permission, progress is only visible on this screen.</string>
+
+    <string name="language_label">Language</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+    <string name="language_system">System</string>
+</resources>
