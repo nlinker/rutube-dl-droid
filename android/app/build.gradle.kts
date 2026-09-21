@@ -33,6 +33,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Generates the localeConfig from the values-* folders,
+    // so API 33+ can list the app's languages in the system settings.
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 dependencies {
