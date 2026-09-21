@@ -46,19 +46,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val settingsState: StateFlow<AppSettings?> =
         settings.flow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    init {
-        viewModelScope.launch {
-            val saved = settings.flow.first()
-            _state.update { it.copy(quality = saved.quality) }
-        }
-    }
-
     fun setUrl(url: String) = _state.update { it.copy(url = url) }
 
-    fun setQuality(quality: Quality) = _state.update { it.copy(quality = quality) }
-
-    fun setDefaultQuality(quality: Quality) {
-        viewModelScope.launch { settings.setQuality(quality) }
+    fun resetHeights() {
+        viewModelScope.launch { settings.resetHeights() }
     }
 
     fun openSettings() = _state.update { it.copy(showSettings = true) }
