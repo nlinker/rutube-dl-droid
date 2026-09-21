@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
@@ -78,16 +79,18 @@ fun SettingsScreen(viewModel: MainViewModel) {
     }
 }
 
-// Language switches of the app
-private val LANGUAGES = listOf("" to R.string.language_system, "ru" to R.string.language_ru, "en" to R.string.language_en)
+// Currently there are two language supported: resource values/ is English, values-ru/ is Russian,
+// so a Russian system gets Russian and every other system gets English
+private val LANGUAGES = listOf("ru" to R.string.language_ru, "en" to R.string.language_en)
 
-// AppCompat owns the language setting: getApplicationLocales() reads it, setApplicationLocales() writes it,
-// and it hides the difference between API 33+ (system option) and below 33 (its own store).
-// After setApplicationLocales() the activity is recreated with the new configuration, so this
-// composable needs neither `remember`, nor a StateFlow, nor a write to DataStore.
+// AppCompat owns the language setting: setApplicationLocales() writes it, and it
+// hides the difference between API 33+ (system option) and below 33 (its own store).
+// After setApplicationLocales() the activity is recreated with the new configuration,
+// so this composable needs neither `remember`, nor a StateFlow, nor a write to DataStore.
+// The selected chip corresponds to the language the resources actually resolved to.
 @Composable
 private fun LanguageChips() {
-    val current = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+    val current = LocalConfiguration.current.locales[0].language
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LANGUAGES.forEach { (tag, label) ->
             FilterChip(
