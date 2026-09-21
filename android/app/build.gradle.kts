@@ -42,6 +42,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.datastore.preferences)
+    // for in-app language switch
+    implementation(libs.androidx.appcompat)
     // viewModelScope uses Dispatchers.Main under the hood.
     implementation(libs.kotlinx.coroutines.android)
     implementation(platform(libs.compose.bom))
