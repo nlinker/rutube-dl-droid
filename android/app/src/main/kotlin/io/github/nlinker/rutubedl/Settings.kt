@@ -47,6 +47,7 @@ fun formatQuality(quality: Quality): String = when (quality) {
     Quality.Worst -> "worst"
     Quality.Best -> "best"
     is Quality.Height -> quality.height.toString()
+    is Quality.AtMost -> "~${quality.height}"
 }
 
 fun parseQuality(text: String): Quality? = when (text) {

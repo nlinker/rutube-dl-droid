@@ -73,8 +73,8 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
 
-            Text(stringResource(R.string.default_quality_label), style = MaterialTheme.typography.labelLarge)
-            QualityChips(selected = settings?.quality ?: state.quality, onSelect = viewModel::setDefaultQuality)
+            Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
+
         }
     }
 }

@@ -80,12 +80,6 @@ fun MainScreen(viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text(
-                stringResource(R.string.quality_label),
-                style = MaterialTheme.typography.labelLarge
-            )
-            QualityChips(selected = state.quality, onSelect = viewModel::setQuality)
-
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = viewModel::probe, enabled = state.probe != ProbeState.Loading) {
                     Text(stringResource(R.string.probe))
