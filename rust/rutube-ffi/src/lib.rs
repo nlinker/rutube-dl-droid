@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use rutube_core::{Error, download, progress, remux, session::Session, url};
+use rutube_core::{Error, download, hls, progress, remux, session::Session, url};
 
 uniffi::setup_scaffolding!();
 
@@ -14,7 +14,10 @@ uniffi::setup_scaffolding!();
 pub enum Quality {
     Worst,
     Best,
+    /// Exactly this height; `probe` fails when the video has no such variant.
     Height { height: u32 },
+    /// The highest variant not above this height, else the lowest one.
+    AtMost { height: u32 },
 }
 
 impl From<Quality> for download::Quality {
@@ -23,23 +26,55 @@ impl From<Quality> for download::Quality {
             Quality::Worst => Self::Worst,
             Quality::Best => Self::Best,
             Quality::Height { height } => Self::Height(height),
+            Quality::AtMost { height } => Self::AtMost(height),
         }
     }
 }
 
-/// What a probe learns before a byte is written: enough to name the file
-/// and size a progress bar.
+/// One resolution the video is available in.
+///
+/// `estimatedSize` is bytes, from the playlist bitrate and the duration; expect
+/// it within a few percent of the real file. Feed it to
+/// `Formatter.formatShortFileSize` for display.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct VariantInfo {
+    pub width: u32,
+    pub height: u32,
+    /// Bits per second, as the playlist declares it.
+    pub bandwidth: u64,
+    pub estimated_size: u64,
+}
+
+impl VariantInfo {
+    fn new(variant: &hls::Variant, duration: f32) -> Self {
+        Self {
+            width: variant.width,
+            height: variant.height,
+            bandwidth: variant.bandwidth,
+            estimated_size: variant.estimated_size(duration),
+        }
+    }
+}
+
+/// What a probe learns before a byte is written: enough to name the file,
+/// size a progress bar and offer the other resolutions.
 ///
 /// The `title` is the raw video title (with emoji and other stuff), but
 /// `file_name` is `{sanitized(title)} ({width}x{height}).mp4`,
 /// so the `file_name` is ready for `createDocument`.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+///
+/// `variants` lists all resolutions, lowest first; `width` and `height` are
+/// the one `probe` chose.
+/// To download, pass a `variants` entry's height back as `Quality.Height`.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct VideoInfo {
     pub title: String,
     pub width: u32,
     pub height: u32,
     pub segments: u32,
     pub file_name: String,
+    pub variants: Vec<VariantInfo>,
+    pub duration_seconds: f32,
 }
 
 impl From<&download::Download> for VideoInfo {
@@ -50,8 +85,19 @@ impl From<&download::Download> for VideoInfo {
             height: download.height,
             segments: download.segments.len() as u32,
             file_name: download.file_name("mp4"),
+            variants: download.variants.iter().map(|variant| VariantInfo::new(variant, download.duration)).collect(),
+            duration_seconds: download.duration,
         }
     }
+}
+
+/// Returns the variant picked by `quality` from `variants`, by the same rule as `probe`.
+/// Returns `null` when the list is empty or `Quality.Height` names a missing resolution.
+#[uniffi::export]
+pub fn resolve(variants: Vec<VariantInfo>, quality: Quality) -> Option<VariantInfo> {
+    let heights: Vec<u32> = variants.iter().map(|variant| variant.height).collect();
+    let index = download::pick(&heights, quality.into()).ok()?;
+    variants.into_iter().nth(index)
 }
 
 /// Mirror of [`rutube_core::Error`] with every foreign payload flattened to a string.
