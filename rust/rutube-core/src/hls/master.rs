@@ -5,10 +5,13 @@ use std::collections::BTreeMap;
 use crate::{Error, Result};
 
 /// One chunk of the master playlist: a resolution and where to fetch it.
+/// Note: `BANDWIDTH` in playlist is in bits per second. The spec says peak, but Rutube's value
+/// is effectively the average, so `bandwidth * duration / 8` estimates the file size.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Variant {
     pub width: u32,
     pub height: u32,
+    pub bandwidth: u64,
     pub uri: String,
     /// A second URI serving the same resolution, used as a CDN fallback.
     pub reserve_uri: Option<String>,
@@ -38,6 +41,7 @@ pub fn parse_master(text: &str) -> Result<Vec<Variant>> {
             .or_insert_with(|| Variant {
                 width: resolution.width as u32,
                 height: resolution.height as u32,
+                bandwidth: stream.bandwidth,
                 uri: stream.uri.clone(),
                 reserve_uri: None,
             });
@@ -60,7 +64,7 @@ mod tests {
 https://cdn-a.example/1080/playlist.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=600000,RESOLUTION=854x480
 https://cdn-a.example/480/playlist.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=600000,RESOLUTION=854x480
+#EXT-X-STREAM-INF:BANDWIDTH=650000,RESOLUTION=854x480
 https://cdn-b.example/480/playlist.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=1500000,RESOLUTION=1280x720
 https://cdn-a.example/720/playlist.m3u8
@@ -82,6 +86,10 @@ https://cdn-a.example/720/playlist.m3u8
 
         // A resolution served once has no fallback.
         assert_eq!(variants[1].reserve_uri, None);
+
+        // Bandwidth comes from the first entry; the fallback's own value is ignored.
+        let bandwidths = variants.iter().map(|v| v.bandwidth).collect_vec();
+        assert_eq!(bandwidths, [600000, 1500000, 3000000]);
     }
 
     #[test]

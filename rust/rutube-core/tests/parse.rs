@@ -27,6 +27,20 @@ fn real_master_playlist_collapses_to_five_resolutions() {
 }
 
 #[test]
+fn every_variant_carries_a_bandwidth() {
+    // The size estimate is built on BANDWIDTH, so every entry must have one.
+    // The assumption "higher resolution -> higher bandwidth" does not always hold
+    // (e.g. 720p and 1080p use a higher H.264 profile and end up below 480p).
+    // Do not assume ordering.
+    let bandwidths: Vec<u64> = hls::parse_master(MASTER)
+        .expect("parse master")
+        .iter()
+        .map(|v| v.bandwidth)
+        .collect();
+    assert_eq!(bandwidths, [612000, 1199000, 1212000, 1150000, 1134000]);
+}
+
+#[test]
 fn variants_are_portrait_so_width_is_the_smaller_side() {
     // Protects the sorting logic: quality is selected on height, not width. This clip is
     // 9:16, so sorting on width would happen to work — sorting on the wrong field

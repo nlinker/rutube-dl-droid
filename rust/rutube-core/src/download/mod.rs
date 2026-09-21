@@ -227,6 +227,7 @@ mod tests {
             .map(|height| Variant {
                 width: height * 9 / 16,
                 height,
+                bandwidth: u64::from(height) * 1000,
                 uri: format!("https://cdn.example/{height}.m3u8"),
                 reserve_uri: None,
             })
