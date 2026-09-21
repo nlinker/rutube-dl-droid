@@ -24,13 +24,16 @@ const RETRIES: usize = 3;
 /// and anything else exotic are covered without enumerating Unicode blocks.
 const KEPT_PUNCTUATION: &str = "-_.,()[]'!";
 
-/// Exact vertical resolution, or automatic selection options
+/// Which variant to pick from the master playlist.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Quality {
     #[default]
     Worst,
     Best,
+    /// Exactly this height; an error when the video has no such variant.
     Height(u32),
+    /// The highest variant not above this height, else the lowest one.
+    AtMost(u32),
 }
 
 impl std::fmt::Display for Quality {
@@ -39,6 +42,7 @@ impl std::fmt::Display for Quality {
             Self::Best => f.write_str("best"),
             Self::Worst => f.write_str("worst"),
             Self::Height(height) => write!(f, "{height}"),
+            Self::AtMost(height) => write!(f, "~{height}"),
         }
     }
 }
@@ -50,10 +54,16 @@ impl std::str::FromStr for Quality {
         match value {
             "best" => Ok(Self::Best),
             "worst" => Ok(Self::Worst),
-            height => height
-                .parse()
-                .map(Self::Height)
-                .map_err(|_| format!("expected a height, \"best\" or \"worst\", got {height:?}")),
+            _ => {
+                let (digits, at_most) = match value.strip_prefix('~') {
+                    Some(rest) => (rest, true),
+                    None => (value, false),
+                };
+                let height = digits
+                    .parse()
+                    .map_err(|_| format!("expected a height, \"~height\", \"best\" or \"worst\", got {value:?}"))?;
+                Ok(if at_most { Self::AtMost(height) } else { Self::Height(height) })
+            }
         }
     }
 }
@@ -173,6 +183,7 @@ fn select(variants: &[Variant], quality: Quality) -> Result<&Variant> {
         Quality::Best => variants.last(),
         Quality::Worst => variants.first(),
         Quality::Height(wanted) => variants.iter().find(|variant| variant.height == wanted),
+        Quality::AtMost(limit) => variants.iter().rfind(|variant| variant.height <= limit).or(variants.first()),
     };
 
     chosen.ok_or_else(|| match quality {
@@ -247,6 +258,28 @@ mod tests {
         assert!(missing.contains("240, 720, 1080"), "{missing}");
 
         assert!(matches!(select(&[], Quality::Best), Err(Error::NoVariants)));
+    }
+
+    #[test]
+    fn select_at_most() {
+        let variants = variants();
+        let at_most = |limit| select(&variants, Quality::AtMost(limit)).unwrap().height;
+
+        assert_eq!(at_most(720), 720, "exact match");
+        assert_eq!(at_most(800), 720, "rounds down to the nearest available");
+        assert_eq!(at_most(4000), 1080, "above the ladder takes the best");
+        assert_eq!(at_most(100), 240, "below the ladder takes the worst");
+
+        assert!(matches!(select(&[], Quality::AtMost(720)), Err(Error::NoVariants)));
+    }
+
+    #[test]
+    fn quality_to_string_and_parse_consistent() {
+        for quality in [Quality::Best, Quality::Worst, Quality::Height(720), Quality::AtMost(720)] {
+            assert_eq!(quality.to_string().parse::<Quality>(), Ok(quality));
+        }
+        assert!("~".parse::<Quality>().is_err());
+        assert!("~abc".parse::<Quality>().is_err());
     }
 
     #[test]

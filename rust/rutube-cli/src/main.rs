@@ -74,7 +74,7 @@ enum Command {
         /// Rutube video URL.
         url: String,
 
-        /// A height such as 720, or "best" / "worst".
+        /// A height such as 720, "~720" for the highest not above it, or "best" / "worst".
         #[arg(short = 'y', long, default_value_t)]
         quality: Quality,
 
