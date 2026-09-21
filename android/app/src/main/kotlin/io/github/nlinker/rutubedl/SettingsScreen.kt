@@ -74,7 +74,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
             }
 
             Text(stringResource(R.string.quality_label), style = MaterialTheme.typography.labelLarge)
-
+            settings?.let {
+                Text(stringResource(R.string.quality_heights, it.fastHeight.toInt(), it.highHeight.toInt()))
+            }
+            OutlinedButton(onClick = viewModel::resetHeights) {
+                Text(stringResource(R.string.quality_reset, DEFAULT_FAST_HEIGHT.toInt(), DEFAULT_HIGH_HEIGHT.toInt()))
+            }
         }
     }
 }

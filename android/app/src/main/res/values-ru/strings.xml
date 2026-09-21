@@ -6,8 +6,6 @@
 
     <string name="url_label">Ссылка на видео</string>
     <string name="quality_label">Качество</string>
-    <string name="quality_worst">худшее</string>
-    <string name="quality_best">лучшее</string>
     <string name="probe">Проверить</string>
     <string name="probing">Проверяем…</string>
     <string name="info_resolution">Разрешение: %1$d×%2$d</string>
@@ -21,7 +19,8 @@
     <string name="folder_pick">Выбрать папку</string>
     <string name="folder_missing">Папка для загрузок исчезла. Выберите другую.</string>
     <string name="folder_not_local">Нужна папка во внутренней памяти или на SD-карте: в облачные хранилища записать видео нельзя.</string>
-    <string name="default_quality_label">Качество по-умолчанию</string>
+    <string name="quality_heights">Быстро: %1$dp, Выс.качество: %2$dp</string>
+    <string name="quality_reset">Сбросить на %1$dp / %2$dp</string>
 
     <string name="download">Скачать</string>
     <string name="cancel">Отмена</string>

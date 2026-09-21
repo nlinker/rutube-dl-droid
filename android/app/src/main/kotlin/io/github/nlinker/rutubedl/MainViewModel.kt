@@ -13,7 +13,6 @@ import io.github.nlinker.rutubedl.bindings.VideoInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,7 +26,6 @@ sealed interface ProbeState {
 
 data class MainUiState(
     val url: String = "",
-    val quality: Quality = Quality.Worst,
     val probe: ProbeState = ProbeState.Idle,
     val showSettings: Boolean = false,
     // The last picked folder came from a provider we cannot seek in.
@@ -83,19 +81,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startDownload(context: Context) {
         val current = _state.value
+        val prefs = settingsState.value ?: return
         if (current.url.isBlank()) return
-        DownloadService.start(context, current.url.trim(), current.quality, settingsState.value?.folder)
+        DownloadService.start(context, current.url.trim(), Quality.AtMost(prefs.preferredHeight), prefs.folder)
     }
 
     fun cancelDownload(context: Context) = DownloadService.cancel(context)
 
     fun probe() {
         val current = _state.value
+        val prefs = settingsState.value ?: return
         if (current.url.isBlank()) return
         _state.update { it.copy(probe = ProbeState.Loading) }
         viewModelScope.launch {
             val result = try {
-                ProbeState.Done(client.probe(current.url.trim(), current.quality).info())
+                ProbeState.Done(client.probe(current.url.trim(), Quality.AtMost(prefs.preferredHeight)).info())
             } catch (e: RutubeException) {
                 Log.w(TAG, "probe failed", e)
                 ProbeState.Failed(e.toString())

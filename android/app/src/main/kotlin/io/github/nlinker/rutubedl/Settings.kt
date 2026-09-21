@@ -18,6 +18,7 @@ enum class Choice { Fast, High }
 data class AppSettings(
     // A SAF tree the user picked; null until the first pick.
     val folder: Uri? = null,
+    // Preferred heights, resolved per video via Quality.AtMost; learned from what the user picks.
     val fastHeight: UInt = DEFAULT_FAST_HEIGHT,
     val highHeight: UInt = DEFAULT_HIGH_HEIGHT,
     val choice: Choice = Choice.Fast,
