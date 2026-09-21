@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.nlinker.rutubedl.bindings.Quality
+import io.github.nlinker.rutubedl.bindings.VariantInfo
+import io.github.nlinker.rutubedl.bindings.resolve
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -23,11 +25,16 @@ data class AppSettings(
     val highHeight: UInt = DEFAULT_HIGH_HEIGHT,
     val choice: Choice = Choice.Fast,
 ) {
-    val preferredHeight: UInt
-        get() = when (choice) {
-            Choice.Fast -> fastHeight
-            Choice.High -> highHeight
-        }
+    val preferredHeight: UInt get() = height(choice)
+
+    fun height(choice: Choice): UInt = when (choice) {
+        Choice.Fast -> fastHeight
+        Choice.High -> highHeight
+    }
+
+    // The variant a row shows for this video; null only when `variants` is empty.
+    fun resolve(choice: Choice, variants: List<VariantInfo>): VariantInfo? =
+        resolve(variants, Quality.AtMost(height(choice)))
 }
 
 const val DEFAULT_FAST_HEIGHT = 360u
