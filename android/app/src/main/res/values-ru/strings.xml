@@ -6,6 +6,9 @@
 
     <string name="url_label">Ссылка на видео</string>
     <string name="quality_label">Качество</string>
+    <string name="quality_fast">Быстро</string>
+    <string name="quality_high">Качество</string>
+    <string name="quality_row">%1$s (%2$dp) · %3$s</string>
     <string name="probe">Проверить</string>
     <string name="probing">Проверяем…</string>
     <string name="info_resolution">Разрешение: %1$d×%2$d</string>

@@ -105,15 +105,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 is ProbeState.Done -> {
                     val info = probe.info
                     Text(info.title, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(
-                            R.string.info_resolution,
-                            info.width.toInt(),
-                            info.height.toInt()
-                        )
-                    )
                     Text(stringResource(R.string.info_segments, info.segments.toInt()))
-                    Text(stringResource(R.string.info_file_name, info.fileName))
+                    settings?.let { QualityList(info.variants, it, viewModel::setChoice) }
                 }
 
                 is ProbeState.Failed -> Text(
