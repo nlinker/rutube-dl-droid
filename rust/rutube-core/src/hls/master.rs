@@ -17,6 +17,14 @@ pub struct Variant {
     pub reserve_uri: Option<String>,
 }
 
+impl Variant {
+    /// File size in bytes for a video `duration` seconds long, assuming
+    /// `bandwidth` holds as the average bitrate.
+    pub fn estimated_size(&self, duration: f32) -> u64 {
+        (self.bandwidth as f64 * f64::from(duration) / 8.0) as u64
+    }
+}
+
 /// Parse a master playlist into variants, sorted worst to best.
 pub fn parse_master(text: &str) -> Result<Vec<Variant>> {
     let playlist =
@@ -90,6 +98,13 @@ https://cdn-a.example/720/playlist.m3u8
         // Bandwidth comes from the first entry; the fallback's own value is ignored.
         let bandwidths = variants.iter().map(|v| v.bandwidth).collect_vec();
         assert_eq!(bandwidths, [600000, 1500000, 3000000]);
+    }
+
+    #[test]
+    fn estimated_size_is_bandwidth_times_duration() {
+        let variant = Variant { width: 136, height: 240, bandwidth: 612_000, uri: String::new(), reserve_uri: None };
+        // 612 kbit/s over six minutes (360 sec) = 27.5 MB, which matches a real download.
+        assert_eq!(variant.estimated_size(360.0), 27_540_000);
     }
 
     #[test]

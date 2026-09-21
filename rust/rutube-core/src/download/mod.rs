@@ -87,10 +87,16 @@ impl Default for DownloadOptions {
 pub struct Download {
     session: Arc<Session>,
     workers: usize,
+    /// The title as service reports it, emoji and all; [`Download::file_name`] sanitizes it.
     pub title: String,
     pub width: u32,
     pub height: u32,
+    /// Segments of the chosen variant, in playback order.
     pub segments: Vec<Segment>,
+    /// Every resolution the video offers, worst to best; the chosen one is among them.
+    pub variants: Vec<Variant>,
+    /// Length of the video in seconds, the same for every variant.
+    pub duration: f32,
 }
 
 impl Download {
@@ -137,7 +143,9 @@ impl Download {
             title: meta.title.unwrap_or_else(|| video.id.clone()),
             width: variant.width,
             height: variant.height,
+            duration: playlist.segments.iter().map(|segment| segment.duration).sum(),
             segments: playlist.segments,
+            variants,
         })
     }
 

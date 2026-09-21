@@ -10,9 +10,7 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use rutube_core::{
-    api,
     download::{Download, DownloadOptions, Quality},
-    hls,
     progress::ProgressListener,
     remux,
     session::Session,
@@ -111,27 +109,19 @@ async fn main() -> ExitCode {
 
 async fn info(input: &str) -> rutube_core::Result<()> {
     let video = url::parse(input)?;
-    let session = Session::new()?;
-    let options = api::play_options(&session, &video).await?;
+    let session = Arc::new(Session::new()?);
+    let download = Download::probe(session, &video, &DownloadOptions::default()).await?;
 
-    let master = session
-        .http()
-        .get(&options.video_balancer.m3u8)
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?;
-    let variants = hls::parse_master(&master)?;
-
-    println!("Title:  {}", options.title.as_deref().unwrap_or(&video.id));
-    println!("Kind:   {}", video.kind.as_str());
-    println!("ID:     {}", video.id);
+    println!("Title:    {}", download.title);
+    println!("Kind:     {}", video.kind.as_str());
+    println!("ID:       {}", video.id);
+    println!("Duration: {:.0} s", download.duration);
     println!();
 
-    for variant in &variants {
+    for variant in &download.variants {
         let reserve = if variant.reserve_uri.is_some() { "yes" } else { "no" };
-        println!("{:>4}x{:<4}  (reserve: {reserve})", variant.width, variant.height);
+        let size = variant.estimated_size(download.duration) as f64 / 1e6;
+        println!("{:>4}x{:<4}  ~{size:.0} MB  (reserve: {reserve})", variant.width, variant.height);
     }
     Ok(())
 }
