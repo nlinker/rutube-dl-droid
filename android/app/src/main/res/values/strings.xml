@@ -32,4 +32,9 @@
     <string name="download_done">Готово: %1$s</string>
     <string name="open">Открыть</string>
     <string name="notifications_denied">Без разрешения на уведомления прогресс виден только на этом экране.</string>
+
+    <string name="language_label">Язык</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+    <string name="language_system">Системный</string>
 </resources>

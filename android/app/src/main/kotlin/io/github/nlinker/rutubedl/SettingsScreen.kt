@@ -5,8 +5,10 @@ import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +57,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
             modifier = Modifier.padding(innerPadding).padding(16.dp).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Text(stringResource(R.string.language_label), style = MaterialTheme.typography.labelLarge)
+            LanguageChips()
+
             Text(stringResource(R.string.folder_label), style = MaterialTheme.typography.labelLarge)
             Text(settings?.folder?.let(::folderLabel) ?: stringResource(R.string.folder_default))
             if (state.folderRejected) {
@@ -67,6 +74,27 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
             Text(stringResource(R.string.default_quality_label), style = MaterialTheme.typography.labelLarge)
             QualityChips(selected = settings?.quality ?: state.quality, onSelect = viewModel::setDefaultQuality)
+        }
+    }
+}
+
+// Language switches of the app
+private val LANGUAGES = listOf("" to R.string.language_system, "ru" to R.string.language_ru, "en" to R.string.language_en)
+
+// AppCompat owns the language setting: getApplicationLocales() reads it, setApplicationLocales() writes it,
+// and it hides the difference between API 33+ (system option) and below 33 (its own store).
+// After setApplicationLocales() the activity is recreated with the new configuration, so this
+// composable needs neither `remember`, nor a StateFlow, nor a write to DataStore.
+@Composable
+private fun LanguageChips() {
+    val current = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LANGUAGES.forEach { (tag, label) ->
+            FilterChip(
+                selected = current == tag,
+                onClick = { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag)) },
+                label = { Text(stringResource(label), maxLines = 1) },
+            )
         }
     }
 }
