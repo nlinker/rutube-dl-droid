@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val download by viewModel.downloadState.collectAsStateWithLifecycle()
+    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // The notification carries the progress bar, so ask before the first download.

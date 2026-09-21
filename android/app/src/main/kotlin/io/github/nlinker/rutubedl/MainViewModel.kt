@@ -46,6 +46,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setUrl(url: String) = _state.update { it.copy(url = url) }
 
+    fun setChoice(choice: Choice) {
+        viewModelScope.launch { settings.setChoice(choice) }
+    }
+
     fun resetHeights() {
         viewModelScope.launch { settings.resetHeights() }
     }
@@ -83,7 +87,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val current = _state.value
         val prefs = settingsState.value ?: return
         if (current.url.isBlank()) return
-        DownloadService.start(context, current.url.trim(), Quality.AtMost(prefs.preferredHeight), prefs.folder)
+        // Exact height of the selected row after a probe, the preference before one.
+        val quality = (current.probe as? ProbeState.Done)
+            ?.let { prefs.resolve(prefs.choice, it.info.variants) }
+            ?.let { Quality.Height(it.height) }
+            ?: Quality.AtMost(prefs.preferredHeight)
+        DownloadService.start(context, current.url.trim(), quality, prefs.folder)
     }
 
     fun cancelDownload(context: Context) = DownloadService.cancel(context)
