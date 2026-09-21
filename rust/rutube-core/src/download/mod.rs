@@ -62,7 +62,11 @@ impl std::str::FromStr for Quality {
                 let height = digits
                     .parse()
                     .map_err(|_| format!("expected a height, \"~height\", \"best\" or \"worst\", got {value:?}"))?;
-                Ok(if at_most { Self::AtMost(height) } else { Self::Height(height) })
+                Ok(if at_most {
+                    Self::AtMost(height)
+                } else {
+                    Self::Height(height)
+                })
             }
         }
     }
@@ -185,19 +189,24 @@ fn sanitize(title: &str) -> String {
         .to_owned()
 }
 
-/// Variants arrive sorted worst to best, so the ends of the slice are the extremes.
 fn select(variants: &[Variant], quality: Quality) -> Result<&Variant> {
-    let chosen = match quality {
-        Quality::Best => variants.last(),
-        Quality::Worst => variants.first(),
-        Quality::Height(wanted) => variants.iter().find(|variant| variant.height == wanted),
-        Quality::AtMost(limit) => variants.iter().rfind(|variant| variant.height <= limit).or(variants.first()),
-    };
+    let heights = variants.iter().map(|variant| variant.height).collect_vec();
+    pick(&heights, quality).map(|index| &variants[index])
+}
 
+/// Index of the variant `quality` picks from `heights`, sorted worst to best.
+pub fn pick(heights: &[u32], quality: Quality) -> Result<usize> {
+    // Both are `None` on an empty list.
+    let best = heights.len().checked_sub(1);
+    let worst = best.map(|_| 0);
+    let chosen = match quality {
+        Quality::Best => best,
+        Quality::Worst => worst,
+        Quality::Height(wanted) => heights.iter().position(|&height| height == wanted),
+        Quality::AtMost(limit) => heights.iter().rposition(|&height| height <= limit).or(worst),
+    };
     chosen.ok_or_else(|| match quality {
-        Quality::Height(wanted) => {
-            Error::NoSuchResolution { wanted, available: variants.iter().map(|v| v.height).join(", ") }
-        }
+        Quality::Height(wanted) => Error::NoSuchResolution { wanted, available: heights.iter().join(", ") },
         _ => Error::NoVariants,
     })
 }
@@ -283,7 +292,12 @@ mod tests {
 
     #[test]
     fn quality_to_string_and_parse_consistent() {
-        for quality in [Quality::Best, Quality::Worst, Quality::Height(720), Quality::AtMost(720)] {
+        for quality in [
+            Quality::Best,
+            Quality::Worst,
+            Quality::Height(720),
+            Quality::AtMost(720),
+        ] {
             assert_eq!(quality.to_string().parse::<Quality>(), Ok(quality));
         }
         assert!("~".parse::<Quality>().is_err());
