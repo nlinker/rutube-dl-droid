@@ -50,6 +50,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { settings.setChoice(choice) }
     }
 
+    fun setHeight(choice: Choice, height: UInt) {
+        viewModelScope.launch { settings.setHeight(choice, height) }
+    }
+
     fun resetHeights() {
         viewModelScope.launch { settings.resetHeights() }
     }

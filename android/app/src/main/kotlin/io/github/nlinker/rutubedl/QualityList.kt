@@ -5,9 +5,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -15,22 +25,32 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import io.github.nlinker.rutubedl.bindings.VariantInfo
 
-// Two rows, one per Choice
+// The heights 144, 240, ... up to 480 are counted as "fast", above it, as "high".
+private const val FAST_MAX_HEIGHT = 480u
+
+private val UInt.category: Choice
+    get() = if (this <= FAST_MAX_HEIGHT) Choice.Fast else Choice.High
+
+// Collapsed: two rows, one per Choice, resolved against this video. The arrow expands them in place
+// into every resolution the video has; picking one becomes the new preference of its category.
 @Composable
-fun QualityList(variants: List<VariantInfo>, settings: AppSettings, onClick: (Choice) -> Unit) {
+fun QualityList(variants: List<VariantInfo>, settings: AppSettings, onChoose: (Choice) -> Unit, onPick: (Choice, UInt) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val selectedHeight = settings.resolve(settings.choice, variants)?.height
+
     Column {
-        Choice.entries.forEach { choice ->
-            val variant = settings.resolve(choice, variants) ?: return@forEach
-            QualityRow(
-                label = stringResource(
-                    R.string.quality_row,
-                    stringResource(choice.label),
-                    variant.height.toInt(),
-                    fileSize(variant.estimatedSize)
-                ),
-                selected = settings.choice == choice,
-                onClick = { onClick(choice) },
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.quality_label),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = { expanded = !expanded }) {
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = stringResource(if (expanded) R.string.quality_collapse else R.string.quality_expand),
+                )
+            }
         }
     }
 }

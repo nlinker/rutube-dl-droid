@@ -59,11 +59,15 @@ class Settings(context: Context) {
 
     suspend fun clearFolder() = store.edit { it.remove(FOLDER) }
 
-    suspend fun setFastHeight(height: UInt) = store.edit { it[FAST_HEIGHT] = height.toInt() }
-
-    suspend fun setHighHeight(height: UInt) = store.edit { it[HIGH_HEIGHT] = height.toInt() }
-
+    // A pick from the collapsed list.
     suspend fun setChoice(choice: Choice) = store.edit { it[CHOICE] = choice.name }
+
+    // A pick from the full list: the height becomes the preference of its category, and that
+    // category the choice. One edit, so the two never disagree.
+    suspend fun setHeight(choice: Choice, height: UInt) = store.edit {
+        it[if (choice == Choice.Fast) FAST_HEIGHT else HIGH_HEIGHT] = height.toInt()
+        it[CHOICE] = choice.name
+    }
 
     suspend fun resetHeights() = store.edit {
         it.remove(FAST_HEIGHT)

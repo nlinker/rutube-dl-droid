@@ -9,6 +9,8 @@
     <string name="quality_fast">Быстро</string>
     <string name="quality_high">Качество</string>
     <string name="quality_row">%1$s (%2$dp) · %3$s</string>
+    <string name="quality_expand">Все разрешения</string>
+    <string name="quality_collapse">Свернуть</string>
     <string name="probe">Проверить</string>
     <string name="probing">Проверяем…</string>
     <string name="info_segments">Сегментов: %1$d</string>

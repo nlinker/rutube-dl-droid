@@ -9,6 +9,8 @@
     <string name="quality_fast">Fast</string>
     <string name="quality_high">High</string>
     <string name="quality_row">%1$s (%2$dp) · %3$s</string>
+    <string name="quality_expand">All resolutions</string>
+    <string name="quality_collapse">Fewer</string>
     <string name="probe">Check</string>
     <string name="probing">Checking…</string>
     <string name="info_segments">Segments: %1$d</string>
