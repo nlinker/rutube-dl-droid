@@ -4,6 +4,7 @@
 # Scratch space
 /tmp/
 /docs/todo/
+/docs/read/
 
 # Rust
 /rust/target/
