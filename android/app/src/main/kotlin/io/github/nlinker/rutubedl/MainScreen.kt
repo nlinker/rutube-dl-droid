@@ -104,7 +104,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 ProbeState.Loading -> Text(stringResource(R.string.probing))
                 is ProbeState.Done -> {
                     val info = probe.info
-                    Text(info.title, style = MaterialTheme.typography.titleMedium)
+                    SelectionContainer {
+                        Text(info.title, style = MaterialTheme.typography.titleMedium)
+                    }
                     Text(stringResource(R.string.info_segments, info.segments.toInt()))
                     settings?.let { QualityList(info.variants, it, viewModel::setChoice, viewModel::setHeight) }
                 }
