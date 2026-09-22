@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.nlinker.rutubedl.bindings.Quality
@@ -25,7 +27,6 @@ sealed interface ProbeState {
 }
 
 data class MainUiState(
-    val url: String = "",
     val probe: ProbeState = ProbeState.Idle,
     val showSettings: Boolean = false,
     // The last picked folder came from a provider we cannot seek in.
@@ -44,7 +45,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val settingsState: StateFlow<AppSettings?> =
         settings.flow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    fun setUrl(url: String) = _state.update { it.copy(url = url) }
+    // The link field's own state: text plus selection.
+    val url = TextFieldState()
+
+    fun setUrl(url: String) = this.url.setTextAndPlaceCursorAtEnd(url)
+
+    // String? (null or non-empty string) is better than String here, because
+    // the compiler helps to ensure a non-empty link in usages like `client.probe`
+    private val link: String? get() = url.text.trim().toString().ifBlank { null }
 
     fun setChoice(choice: Choice) {
         viewModelScope.launch { settings.setChoice(choice) }
@@ -90,25 +98,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun startDownload(context: Context) {
         val current = _state.value
         val prefs = settingsState.value ?: return
-        if (current.url.isBlank()) return
+        val link = link ?: return
         // Exact height of the selected row after a probe, the preference before one.
         val quality = (current.probe as? ProbeState.Done)
             ?.let { prefs.resolve(prefs.choice, it.info.variants) }
             ?.let { Quality.Height(it.height) }
             ?: Quality.AtMost(prefs.preferredHeight)
-        DownloadService.start(context, current.url.trim(), quality, prefs.folder)
+        DownloadService.start(context, link, quality, prefs.folder)
     }
 
     fun cancelDownload(context: Context) = DownloadService.cancel(context)
 
     fun probe() {
-        val current = _state.value
         val prefs = settingsState.value ?: return
-        if (current.url.isBlank()) return
+        val link = link ?: return
         _state.update { it.copy(probe = ProbeState.Loading) }
         viewModelScope.launch {
             val result = try {
-                ProbeState.Done(client.probe(current.url.trim(), Quality.AtMost(prefs.preferredHeight)).info())
+                ProbeState.Done(client.probe(link, Quality.AtMost(prefs.preferredHeight)).info())
             } catch (e: RutubeException) {
                 Log.w(TAG, "probe failed", e)
                 ProbeState.Failed(e.toString())
