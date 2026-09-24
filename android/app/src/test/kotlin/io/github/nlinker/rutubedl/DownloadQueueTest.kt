@@ -26,13 +26,13 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
-        val b = queue.enqueue(VideoUrl(URL_B), Quality.Height(360u), null)!!
-        queue.enqueue(VideoUrl(URL_C), Quality.Height(360u), null)
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
+        val b = queue.enqueue(URL_B, Quality.Height(360u), null)!!
+        queue.enqueue(URL_C, Quality.Height(360u), null)
         advanceUntilIdle()
 
         assertEquals(listOf(a), downloader.started)
-        assertEquals(listOf(URL_A, URL_B, URL_C), queue.entries.value.map { it.task.url.value })
+        assertEquals(listOf(URL_A, URL_B, URL_C), queue.entries.value.map { it.task.url })
         assertTrue(queue.entries.value[0].state is TaskState.Running)
         assertTrue(queue.entries.value[1].state is TaskState.Waiting)
 
@@ -49,7 +49,7 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
         advanceUntilIdle()
         downloader.report(a, "Lecture 1", done = 3, total = 10)
         advanceUntilIdle()
@@ -61,7 +61,7 @@ class DownloadQueueTest {
         val rounds = 500
         val reporter =
             thread { repeat(rounds) { downloader.report(a, "Lecture 1", it + 1, rounds) } }
-        repeat(rounds) { queue.enqueue(VideoUrl("$URL_B/$it"), Quality.Height(360u), null) }
+        repeat(rounds) { queue.enqueue(VideoUrl("${URL_B.value}$it"), Quality.Height(360u), null) }
         reporter.join()
 
         assertEquals(rounds + 1, queue.entries.value.size)
@@ -73,14 +73,14 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
-        val b = queue.enqueue(VideoUrl(URL_B), Quality.Height(360u), null)!!
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
+        val b = queue.enqueue(URL_B, Quality.Height(360u), null)!!
         advanceUntilIdle()
 
         queue.cancel(b)
         advanceUntilIdle()
 
-        assertEquals(listOf(URL_A), queue.entries.value.map { it.task.url.value })
+        assertEquals(listOf(URL_A), queue.entries.value.map { it.task.url })
         assertTrue(queue.entries.value.single().state is TaskState.Running)
         assertEquals(listOf(a), downloader.started)
     }
@@ -90,15 +90,15 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
-        val b = queue.enqueue(VideoUrl(URL_B), Quality.Height(360u), null)!!
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
+        val b = queue.enqueue(URL_B, Quality.Height(360u), null)!!
         advanceUntilIdle()
 
         queue.cancel(a)
         advanceUntilIdle()
 
         // A canceled entry disappears: it is not a failure worth showing.
-        assertEquals(listOf(URL_B), queue.entries.value.map { it.task.url.value })
+        assertEquals(listOf(URL_B), queue.entries.value.map { it.task.url })
         assertEquals(listOf(a, b), downloader.started)
     }
 
@@ -107,8 +107,8 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
-        queue.enqueue(VideoUrl(URL_B), Quality.Height(360u), null)
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
+        queue.enqueue(URL_B, Quality.Height(360u), null)
         advanceUntilIdle()
 
         downloader.fail(a, "no network")
@@ -123,11 +123,11 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)
         assertNotNull(a)
-        assertNull(queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null))
+        assertNull(queue.enqueue(URL_A, Quality.Height(360u), null))
         // Another quality of the same video is a separate file, so it is a separate task.
-        assertNotNull(queue.enqueue(VideoUrl(URL_A), Quality.Height(720u), null))
+        assertNotNull(queue.enqueue(URL_A, Quality.Height(720u), null))
         advanceUntilIdle()
 
         assertEquals(2, queue.entries.value.size)
@@ -135,7 +135,7 @@ class DownloadQueueTest {
         // Once it has finished it is history, and asking for it again starts a new download.
         downloader.finish(a!!)
         advanceUntilIdle()
-        assertNotNull(queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null))
+        assertNotNull(queue.enqueue(URL_A, Quality.Height(360u), null))
     }
 
     @Test
@@ -143,8 +143,8 @@ class DownloadQueueTest {
         val downloader = StubDownloader()
         val queue = makeQueue(downloader)
 
-        val a = queue.enqueue(VideoUrl(URL_A), Quality.Height(360u), null)!!
-        val b = queue.enqueue(VideoUrl(URL_B), Quality.Height(360u), null)!!
+        val a = queue.enqueue(URL_A, Quality.Height(360u), null)!!
+        val b = queue.enqueue(URL_B, Quality.Height(360u), null)!!
         advanceUntilIdle()
         assertTrue(queue.entries.value.isBusy)
 
@@ -163,7 +163,7 @@ class DownloadQueueTest {
         val queue = makeQueue(downloader)
 
         // One more than the cap, plus a tail that never finishes.
-        val ids = List(25) { queue.enqueue(VideoUrl("$URL_A/$it"), Quality.Height(360u), null)!! }
+        val ids = List(25) { queue.enqueue(VideoUrl("${URL_A.value}$it"), Quality.Height(360u), null)!! }
         advanceUntilIdle()
         ids.take(22).forEach { id ->
             downloader.finish(id)
@@ -177,9 +177,9 @@ class DownloadQueueTest {
     }
 }
 
-private const val URL_A = "https://rutube.ru/video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/"
-private const val URL_B = "https://rutube.ru/video/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/"
-private const val URL_C = "https://rutube.ru/video/cccccccccccccccccccccccccccccccc/"
+private val URL_A = VideoUrl("https://rutube.ru/video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/")
+private val URL_B = VideoUrl("https://rutube.ru/video/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/")
+private val URL_C = VideoUrl("https://rutube.ru/video/cccccccccccccccccccccccccccccccc/")
 
 // A scope of its own on the test scheduler: built from scratch, so it carries neither the test's
 // Job nor its dispatcher, and `runTest` does not wait for downloads a test leaves parked. The
