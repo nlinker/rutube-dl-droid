@@ -65,13 +65,11 @@ fun interface Downloader {
 }
 
 // Queue to download videos, in the order they arrive.
-// Ordering, cancellation and reporting only; the surrounding service owns the notification and its
-// own lifetime.
+// For now - ordering, cancellation and reporting only, pause/resume is not implemented yet.
 //
-// `enqueue` and `cancel` must be called from main UI thread (`scope`'s dispatcher),
+// `enqueue` and `cancel` must be called from main UI thread,
 // because they touch the id counter and the `jobs` map. Progress reports may
-// come from any thread: every change to the published list goes through `_entries.update`,
-// which is a CAS and is safe.
+// come from any thread: every change goes through `_entries.update`, which is a CAS and is safe.
 class DownloadQueue(private val downloader: Downloader, private val scope: CoroutineScope) {
     // Shared between tokio worker thread (progress reports) and main UI thread.
     // The most recent entries are last in the list.
@@ -106,7 +104,7 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
         if (_entries.value.count { it.state is TaskState.Running } >= RUNNING_LIMIT) return
         val task = _entries.value.firstOrNull { it.state is TaskState.Waiting }?.task ?: return
 
-        setState(task.id, TaskState.Running(title = task.url, done = 0, total = 0))
+        setTaskState(task.id, TaskState.Running(title = task.url, done = 0, total = 0))
         // LAZY means do not start immediately, wait until explicitly called start()
         val job = scope.launch(start = CoroutineStart.LAZY) { runTask(task) }
         jobs[task.id] = job
@@ -124,19 +122,19 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
     private suspend fun runTask(task: Task) {
         try {
             val finished = downloader.download(task) { title, done, total ->
-                setState(task.id, TaskState.Running(title, done, total))
+                setTaskState(task.id, TaskState.Running(title, done, total))
             }
-            setState(task.id, TaskState.Done(finished.name, finished.uri))
+            setTaskState(task.id, TaskState.Done(finished.name, finished.uri))
         } catch (e: CancellationException) {
             // The user stopped it: the entry goes away entirely, this is not a failure.
             _entries.update { list -> list.filter { it.task.id != task.id } }
             throw e
         } catch (e: Exception) {
-            setState(task.id, TaskState.Failed(e.message ?: e.toString()))
+            setTaskState(task.id, TaskState.Failed(e.message ?: e.toString()))
         }
     }
 
-    private fun setState(id: Long, state: TaskState) {
+    private fun setTaskState(id: Long, state: TaskState) {
         _entries.update { list -> list.map { if (it.task.id == id) it.copy(state = state) else it } }
     }
 
