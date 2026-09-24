@@ -111,9 +111,14 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
         // Runs on completion of any kind, cancellation included, so this is where the slot is
         // freed and the next task picked up. Keeping it here rather than in a `finally` inside
         // `runTask` leaves that function to do the work and record the outcome, nothing else.
-        job.invokeOnCompletion {
+        job.invokeOnCompletion { cause ->
             jobs.remove(task.id)
-            trim()
+            // A canceled task leaves no trace. It has to be dropped here and not in `runTask`:
+            // a job canceled before its body starts never reaches the try block at all.
+            if (cause is CancellationException) {
+                _entries.update { list -> list.filter { it.task.id != task.id } }
+            }
+            trimTasks()
             ensureRunning()
         }
         job.start()
@@ -126,8 +131,7 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
             }
             setTaskState(task.id, TaskState.Done(finished.name, finished.uri))
         } catch (e: CancellationException) {
-            // The user stopped it: the entry goes away entirely, this is not a failure.
-            _entries.update { list -> list.filter { it.task.id != task.id } }
+            // Not a failure, and the completion handler above already drops the entry.
             throw e
         } catch (e: Exception) {
             setTaskState(task.id, TaskState.Failed(e.message ?: e.toString()))
@@ -139,7 +143,7 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
     }
 
     // Keep the newest KEEP_FINISHED finished entries; waiting and running ones are never dropped.
-    private fun trim() {
+    private fun trimTasks() {
         _entries.update { list ->
             val doomed = list.filter { !it.state.isPending }
                 .dropLast(KEEP_FINISHED)
