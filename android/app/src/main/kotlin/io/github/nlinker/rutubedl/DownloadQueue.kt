@@ -28,7 +28,7 @@ sealed interface TaskState {
     data object Waiting : TaskState
 
     // `total` is 0 until the probe comes back with a segment count.
-    data class Running(val title: String, val done: Int, val total: Int) : TaskState
+    data class Running(val done: Int, val total: Int) : TaskState
     data class Done(val name: String, val uri: String) : TaskState
     data class Failed(val message: String) : TaskState
 }
@@ -39,8 +39,9 @@ val TaskState.isPending: Boolean
 val List<Entry>.isBusy: Boolean
     get() = any { it.state.isPending }
 
-// the element of the queue
-data class Entry(val task: Task, val state: TaskState)
+// The element of the queue. `title` is the video title, which only the probe can tell, so it
+// stays null until the first progress report and then holds for every state that follows.
+data class Entry(val task: Task, val state: TaskState, val title: String? = null)
 
 // What the downloader produced: where the finished file ended up, `uri` as a content Uri
 // string. The queue turns it into `TaskState.Done`, which is its own business.
@@ -79,16 +80,17 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
     private var nextId = 1L
     private val jobs = mutableMapOf<Long, Job>()
 
-    // Returns false when the same video in the same quality is already queued or running.
+    // Returns the id of the queued task, or null when the same video in the same quality
+    // is already queued or running.
     @MainThread
-    fun enqueue(url: String, quality: Quality, folder: String?): Boolean {
+    fun enqueue(url: String, quality: Quality, folder: String?): Long? {
         val duplicate =
             _entries.value.any { it.task.url == url && it.task.quality == quality && it.state.isPending }
-        if (duplicate) return false
+        if (duplicate) return null
         val task = Task(nextId++, url, quality, folder)
         _entries.update { it + Entry(task, TaskState.Waiting) }
         ensureRunning()
-        return true
+        return task.id
     }
 
     // Drops a waiting entry, or stops a running one. Unknown ids are ignored.
@@ -104,7 +106,7 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
         if (_entries.value.count { it.state is TaskState.Running } >= RUNNING_LIMIT) return
         val task = _entries.value.firstOrNull { it.state is TaskState.Waiting }?.task ?: return
 
-        setTaskState(task.id, TaskState.Running(title = task.url, done = 0, total = 0))
+        setTaskState(task.id, TaskState.Running(done = 0, total = 0))
         // LAZY means do not start immediately, wait until explicitly called start()
         val job = scope.launch(start = CoroutineStart.LAZY) { runTask(task) }
         jobs[task.id] = job
@@ -127,7 +129,11 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
     private suspend fun runTask(task: Task) {
         try {
             val finished = downloader.download(task) { title, done, total ->
-                setTaskState(task.id, TaskState.Running(title, done, total))
+                _entries.update { list ->
+                    list.map {
+                        if (it.task.id == task.id) it.copy(state = TaskState.Running(done, total), title = title) else it
+                    }
+                }
             }
             setTaskState(task.id, TaskState.Done(finished.name, finished.uri))
         } catch (e: CancellationException) {
