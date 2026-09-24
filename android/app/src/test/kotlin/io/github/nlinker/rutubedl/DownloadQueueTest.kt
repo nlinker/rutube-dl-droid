@@ -181,17 +181,15 @@ private val URL_A = VideoUrl("https://rutube.ru/video/aaaaaaaaaaaaaaaaaaaaaaaaaa
 private val URL_B = VideoUrl("https://rutube.ru/video/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/")
 private val URL_C = VideoUrl("https://rutube.ru/video/cccccccccccccccccccccccccccccccc/")
 
-// A scope of its own on the test scheduler: built from scratch, so it carries neither the test's
-// Job nor its dispatcher, and `runTest` does not wait for downloads a test leaves parked. The
-// SupervisorJob mirrors production, where one failed download must not take the scope down.
-// Not `backgroundScope`: `advanceUntilIdle` does not run work launched there.
+// A scope of its own, so `runTest` does not wait for downloads a test leaves parked, and a
+// SupervisorJob as in production. `advanceUntilIdle` skips work there, NOT `backgroundScope`.
 private fun TestScope.makeQueue(downloader: Downloader) =
     DownloadQueue(
         downloader,
         CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
     )
 
-// Stands in for `RealDownloader`. Every download parks until the test completes it, so the test
+// The stub parks all downloads until the test completes it, so the test
 // decides when each one finishes and in what order.
 private class StubDownloader : Downloader {
     // a journal of run events, the ids are never removed
