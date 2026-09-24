@@ -16,20 +16,41 @@ import kotlinx.coroutines.launch
 // --------------
 // Nothing here may depend on android.*: a plain JVM unit test drives this queue, and the stub
 // android.jar on that classpath throws RuntimeException from every method - even from a value
-// type like Uri.parse. Escaping that needs Robolectric or `returnDefaultValues = true`, so paths
-// and similar arguments have String type.
+// type like Uri.parse. Escaping that needs Robolectric or `returnDefaultValues = true`, so every
+// address below is a String. The three of them mean different things, hence the three wrappers:
+// on the JVM a value class is erased back to the String it holds, and the `init` turns what used
+// to be a comment into a check at the point of construction.
 
-// Task corresponds to a video to fetch.
-// - `folder` is a SAF tree Uri as a string, `null` for the Download collection.
-// - `url` is the page link the user shared or pasted, the one Client.probe takes.
-data class Task(val id: Long, val url: String, val quality: Quality, val folder: String?)
+// The page link the user shared or pasted, the one Client.probe takes.
+@JvmInline
+value class VideoUrl(val value: String) {
+    init {
+        require(value.startsWith("http://") || value.startsWith("https://")) { "not a video link: $value" }
+    }
+}
+
+// A SAF tree, the folder the user picked. Names a grant, not a directory.
+@JvmInline
+value class FolderUri(val value: String) {
+    init { require(value.startsWith("content://")) { "not a content Uri: $value" } }
+}
+
+// A single file: a MediaStore row or a SAF document, whichever the downloader created.
+@JvmInline
+value class FileUri(val value: String) {
+    init { require(value.startsWith("content://")) { "not a content Uri: $value" } }
+}
+
+// One video to fetch, settled at enqueue and never changed. Null folder means the Download
+// collection.
+data class Task(val id: Long, val url: VideoUrl, val quality: Quality, val folder: FolderUri?)
 
 sealed interface TaskState {
     data object Waiting : TaskState
 
     // `total` is 0 until the probe comes back with a segment count.
     data class Running(val done: Int, val total: Int) : TaskState
-    data class Done(val name: String, val uri: String) : TaskState
+    data class Done(val name: String, val uri: FileUri) : TaskState
     data class Failed(val message: String) : TaskState
 }
 
@@ -43,11 +64,9 @@ val List<Entry>.isBusy: Boolean
 // stays null until the first progress report and then holds for every state that follows.
 data class Entry(val task: Task, val state: TaskState, val title: String? = null)
 
-// What the downloader produced: where the finished file ended up, `uri` as a content Uri
-// string. The queue turns it into `TaskState.Done`, which is its own business.
-// content Uri example:
-// `content://com.android.externalstorage.documents/tree/primary%3AMovies%2FRutube/document/primary%3AMovies%2FRutube%2Fvideo%20.mp4`
-data class Finished(val name: String, val uri: String)
+// What the downloader produced. The queue turns it into `TaskState.Done`, which is its own
+// business.
+data class Finished(val name: String, val uri: FileUri)
 
 // An exception whose message is already localized and fit to show, so the queue
 // puts it into `Failed` as is.
@@ -83,7 +102,7 @@ class DownloadQueue(private val downloader: Downloader, private val scope: Corou
     // Returns the id of the queued task, or null when the same video in the same quality
     // is already queued or running.
     @MainThread
-    fun enqueue(url: String, quality: Quality, folder: String?): Long? {
+    fun enqueue(url: VideoUrl, quality: Quality, folder: FolderUri?): Long? {
         val duplicate =
             _entries.value.any { it.task.url == url && it.task.quality == quality && it.state.isPending }
         if (duplicate) return null
