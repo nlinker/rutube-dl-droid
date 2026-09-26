@@ -28,7 +28,7 @@ fun DownloadList(entries: List<Entry>, onCancel: (Long) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         entries.forEach { entry ->
             when (val state = entry.state) {
-                TaskState.Waiting -> WaitingRow(entry, onCancel)
+                is TaskState.Waiting -> WaitingRow(entry, onCancel)
                 is TaskState.Running -> RunningRow(entry, state, onCancel)
                 is TaskState.Done -> DoneRow(state)
                 is TaskState.Failed -> FailedRow(entry, state)
@@ -42,7 +42,10 @@ private fun WaitingRow(entry: Entry, onCancel: (Long) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.label(), maxLines = 1)
-            Text(stringResource(R.string.download_waiting), style = MaterialTheme.typography.bodySmall)
+            Text(
+                stringResource(R.string.download_waiting),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
         CancelButton(entry, onCancel)
     }
@@ -52,7 +55,11 @@ private fun WaitingRow(entry: Entry, onCancel: (Long) -> Unit) {
 private fun RunningRow(entry: Entry, state: TaskState.Running, onCancel: (Long) -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(entry.label(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(
+                entry.label(),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
             CancelButton(entry, onCancel)
         }
         // `total` is 0 until the probe comes back, and a bar with no total has to be indeterminate.
