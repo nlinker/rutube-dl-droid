@@ -30,6 +30,7 @@
     <string name="notification_channel">Загрузки</string>
     <string name="notification_progress">%1$d из %2$d сегментов</string>
     <string name="download_progress">Скачано %1$d из %2$d сегментов</string>
+    <string name="download_waiting">В очереди</string>
     <string name="download_starting">Начинаем…</string>
     <string name="download_done">Готово: %1$s</string>
     <string name="open">Открыть</string>
