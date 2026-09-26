@@ -59,3 +59,18 @@ cargo ndk -P 24 -t arm64-v8a build -p rutube-ffi
 
 Then check `./rust/target/aarch64-linux-android/debug/librutube_ffi.so` - this is the expected FFI layer built.
 `-P` is the API level and must match the app's `minSdk`.
+
+
+## Run Kotlin tests
+
+Executed from the `rutube-dl-droid/android`. Pure junit, no device required.
+
+```bash
+gradlew :app:testDebugUnitTest
+```
+
+then open the html report
+
+```bash
+xdg-open app/build/reports/tests/testDebugUnitTest/index.html
+```

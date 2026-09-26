@@ -44,13 +44,14 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val download by viewModel.downloadState.collectAsStateWithLifecycle()
+    val downloads by viewModel.downloadState.collectAsStateWithLifecycle()
     val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -109,7 +110,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             viewModel.startDownload(context)
                         }
                     },
-                    enabled = viewModel.url.text.isNotBlank() && download !is DownloadState.Running,
+                    enabled = viewModel.url.text.isNotBlank(),
                 ) {
                     Text(stringResource(R.string.download))
                 }
@@ -140,20 +141,23 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
             }
 
-            when (val current = download) {
-                DownloadState.Idle -> {}
-                is DownloadState.Running -> DownloadProgress(
-                    current,
-                    onCancel = { viewModel.cancelDownload(context) })
+            // The list proper comes in the next step; for now the newest entry, as before.
+            when (val current = downloads.lastOrNull()?.state) {
+                null, TaskState.Waiting -> {}
+                is TaskState.Running -> DownloadProgress(
+                    title = downloads.last().title ?: downloads.last().task.url.value,
+                    state = current,
+                    onCancel = { viewModel.cancelDownload(downloads.last().task.id) },
+                )
 
-                is DownloadState.Done -> {
+                is TaskState.Done -> {
                     Text(stringResource(R.string.download_done, current.name))
                     OutlinedButton(onClick = { context.startActivity(view(current)) }) {
                         Text(stringResource(R.string.open))
                     }
                 }
 
-                is DownloadState.Failed -> Text(
+                is TaskState.Failed -> Text(
                     stringResource(R.string.error_prefix, current.message),
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -198,8 +202,8 @@ private fun UrlField(field: TextFieldState) {
 }
 
 @Composable
-private fun DownloadProgress(state: DownloadState.Running, onCancel: () -> Unit) {
-    Text(state.title, style = MaterialTheme.typography.titleMedium)
+private fun DownloadProgress(title: String, state: TaskState.Running, onCancel: () -> Unit) {
+    Text(title, style = MaterialTheme.typography.titleMedium)
     if (state.total == 0) {
         Text(stringResource(R.string.download_starting))
         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -213,7 +217,7 @@ private fun DownloadProgress(state: DownloadState.Running, onCancel: () -> Unit)
     OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
 }
 
-private fun view(done: DownloadState.Done): Intent =
+private fun view(done: TaskState.Done): Intent =
     Intent(Intent.ACTION_VIEW)
-        .setDataAndType(done.uri, "video/mp4")
+        .setDataAndType(done.uri.value.toUri(), "video/mp4")
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

@@ -10,54 +10,44 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.IBinder
-import android.util.Log
 import io.github.nlinker.rutubedl.bindings.Quality
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
-// Downloads one video. A foreground service, not a ViewModel coroutine: only a
-// service with a visible notification survives the user leaving the screen.
+// Keeps the downloads alive and visible. The work itself belongs to `App.queue`. The queue outlives
+// this service. The service adds a foreground notification, which is what stops Android from
+// killing the process while a download runs.
 class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val downloader by lazy { RealDownloader(this) }
-    private var job: Job? = null
+    private val queue by lazy { (application as App).queue }
+    private var watching = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) {
-            job?.cancel()
+            // No task id is passed with the intent: the button means "stop all the downloads".
+            queue.entries.value.filter { it.state is TaskState.Running }.forEach { queue.cancel(it.task.id) }
             return START_NOT_STICKY
         }
 
         val url = intent?.getStringExtra(EXTRA_URL) ?: return stopAndReturn()
         val quality = intent.getStringExtra(EXTRA_QUALITY)?.let(::parseQuality) ?: Quality.Worst
         // No folder means the system Download collection.
-        val folder = intent.getStringExtra(EXTRA_FOLDER)?.let(Uri::parse)
+        val folder = intent.getStringExtra(EXTRA_FOLDER)?.let(::FolderUri)
 
-        // One download at a time: the second download will use the same notification and state.
-        if (job?.isActive == true) return START_NOT_STICKY
-
-        Downloads.set(DownloadState.Running(title = url, done = 0, total = 0))
+        // The notification has to be pushed within five seconds of startForegroundService, and the
+        // title is all we know until the probe comes back.
         startForeground(
             NOTIFICATION_ID,
             notification(url, 0, 0),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         )
-        job = scope.launch {
-            // try-finally: the service must stop regardless of the download result.
-            try {
-                download(url, quality, folder)
-            } finally {
-                stopSelf()
-            }
-        }
+        queue.enqueue(VideoUrl(url), quality, folder)
+        watchQueue()
         return START_NOT_STICKY
     }
 
@@ -66,24 +56,23 @@ class DownloadService : Service() {
         super.onDestroy()
     }
 
-    private suspend fun download(url: String, quality: Quality, folder: Uri?) {
-        // id=0 stands in until the queue hands out real ids.
-        val task = Task(0, VideoUrl(url), quality, folder?.let { FolderUri(it.toString()) })
-        try {
-            val finished = downloader.download(task) { title, done, total ->
-                Downloads.set(DownloadState.Running(title, done, total))
-                notify(notification(title, done, total))
+    // One collector drives both the notification and the lifetime of the service. Started after
+    // the first enqueue, so `first { !isBusy }` cannot see the empty list we began with.
+    private fun watchQueue() {
+        if (watching) return
+        watching = true
+        scope.launch {
+            queue.entries.collect { entries ->
+                val running = entries.firstOrNull { it.state is TaskState.Running }
+                if (running == null && !entries.isBusy) {
+                    stopSelf()
+                    return@collect
+                }
+                if (running != null) {
+                    val state = running.state as TaskState.Running
+                    notify(notification(running.title ?: running.task.url.value, state.done, state.total))
+                }
             }
-            Downloads.set(DownloadState.Done(finished.name, finished.uri.value.toUri()))
-        } catch (e: CancellationException) {
-            // The user stopped it: not an error.
-            Downloads.set(DownloadState.Idle)
-            throw e
-        } catch (e: Exception) {
-            // RutubeException from Rust or anything else: never let it out of the
-            // coroutine, an uncaught exception here takes the whole process down.
-            Log.w(TAG, "download failed", e)
-            Downloads.set(DownloadState.Failed(e.message ?: e.toString()))
         }
     }
 
@@ -116,7 +105,6 @@ class DownloadService : Service() {
     }
 
     companion object {
-        private const val TAG = "RutubeDL"
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "downloads"
         private const val ACTION_CANCEL = "io.github.nlinker.rutubedl.CANCEL"
@@ -140,14 +128,6 @@ class DownloadService : Service() {
                 .putExtra(EXTRA_QUALITY, formatQuality(quality))
                 .putExtra(EXTRA_FOLDER, folder?.toString())
             context.startForegroundService(intent)
-        }
-
-        fun cancel(context: Context) {
-            context.startService(
-                Intent(context, DownloadService::class.java).setAction(
-                    ACTION_CANCEL
-                )
-            )
         }
     }
 }

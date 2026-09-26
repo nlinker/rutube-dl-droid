@@ -36,6 +36,7 @@ data class MainUiState(
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val client = (app as App).client
     private val settings = (app as App).settings
+    private val queue = (app as App).queue
     private val resolver = app.contentResolver
 
     private val _state = MutableStateFlow(MainUiState())
@@ -93,7 +94,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { settings.clearFolder() }
     }
 
-    val downloadState: StateFlow<DownloadState> = Downloads.state
+    val downloadState: StateFlow<List<Entry>> = queue.entries
 
     fun startDownload(context: Context) {
         val current = _state.value
@@ -107,7 +108,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         DownloadService.start(context, link, quality, prefs.folder)
     }
 
-    fun cancelDownload(context: Context) = DownloadService.cancel(context)
+    // Straight to the queue
+    fun cancelDownload(id: Long) = queue.cancel(id)
 
     fun probe() {
         val prefs = settingsState.value ?: return
